@@ -1,5 +1,104 @@
-﻿<h3>EmployeeManagement</h3>
+﻿@page "/manager/employees"
+@inject IEmployeeService EmployeeService
+
+<h3>Quản lý nhân viên</h3>
+
+<div class="card p-3 mb-3">
+    <h5>Thêm nhân viên mới</h5>
+    <div class="row g-2">
+        <div class="col-md-2"><input class="form-control" placeholder="Username" @bind="formUsername" /></div>
+        <div class="col-md-2"><input class="form-control" type="password" placeholder="Mật khẩu" @bind="formPassword" /></div>
+        <div class="col-md-2"><input class="form-control" placeholder="Họ tên" @bind="formFullName" /></div>
+        <div class="col-md-2"><input class="form-control" placeholder="Email" @bind="formEmail" /></div>
+        <div class="col-md-2"><input class="form-control" placeholder="SĐT" @bind="formPhone" /></div>
+        <div class="col-md-2">
+            <select class="form-control" @bind="formPosition">
+                <option value="receptionist">Lễ tân</option>
+                <option value="manager">Quản lý</option>
+            </select>
+        </div>
+        <div class="col-md-2"><input class="form-control" type="number" placeholder="Lương" @bind="formSalary" /></div>
+        <div class="col-md-2"><button class="btn btn-primary w-100" @onclick="HandleCreateClick">Tạo tài khoản</button></div>
+    </div>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="text-danger mt-2">@errorMessage</p>
+    }
+</div>
+
+@if (loading)
+{
+    <p>Đang tải...</p>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr><th>Họ tên</th><th>Username</th><th>Chức vụ</th><th>Lương</th><th>Trạng thái</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var emp in employees)
+            {
+                <tr>
+                    <td>@emp.User.FullName</td>
+                    <td>@emp.User.Username</td>
+                    <td>@emp.Position</td>
+                    <td>@emp.Salary?.ToString("N0")</td>
+                    <td>@(emp.User.IsActive ? "Đang làm" : "Đã khóa")</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => HandleDeactivateClick(emp.Id)">Khóa</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
 
 @code {
+    private bool loading = true;
+    private List<Employee> employees = new();
 
+    private string formUsername = "";
+    private string formPassword = "";
+    private string formFullName = "";
+    private string formEmail = "";
+    private string formPhone = "";
+    private string formPosition = "receptionist";
+    private decimal? formSalary;
+    private string errorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEmployeesAsync();
+    }
+
+    private async Task LoadEmployeesAsync()
+    {
+        loading = true;
+        employees = await EmployeeService.GetAllEmployeesAsync();
+        loading = false;
+    }
+
+    private async Task HandleCreateClick()
+    {
+        errorMessage = "";
+        var result = await EmployeeService.CreateEmployeeAsync(
+            formUsername, formPassword, formFullName, formEmail, formPhone, formPosition, formSalary);
+
+        if (!result.Success)
+        {
+            errorMessage = result.ErrorMessage;
+            return;
+        }
+
+        formUsername = formPassword = formFullName = formEmail = formPhone = "";
+        formSalary = null;
+        await LoadEmployeesAsync();
+    }
+
+    private async Task HandleDeactivateClick(int employeeId)
+    {
+        await EmployeeService.DeactivateEmployeeAsync(employeeId);
+        await LoadEmployeesAsync();
+    }
 }

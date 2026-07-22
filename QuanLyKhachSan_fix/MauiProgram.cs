@@ -22,19 +22,22 @@ namespace QuanLyKhachSan_fix
 
             builder.Services.AddMauiBlazorWebView();
 
+
             // ---- Thêm phần này ----
 
-            // Connection string tạm hardcode (vi appsettings.json khong tu doc duoc trong MAUI)
+           
             const string connectionString = "Server=localhost;Database=QuanLyKhachSan;Trusted_Connection=True;TrustServerCertificate=True;";
+
+
 
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
-            //builder.Services.AddScoped<IAuthService, AuthService>();
-            //builder.Services.AddScoped<IRoomService, RoomService>();
+         //   builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IRoomService, RoomService>();
             // TODO: 3 thanh vien them dong dang ky Service cua minh vao day
             // builder.Services.AddScoped<IBookingService, BookingService>();      // Thanh vien 1
             // builder.Services.AddScoped<ICheckInOutService, CheckInOutService>();// Thanh vien 2
-            // builder.Services.AddScoped<IEmployeeService, EmployeeService>();    // Thanh vien 3
+             builder.Services.AddScoped<IEmployeeService, EmployeeService>();    // Thanh vien 3
 
             // ---- Hết phần thêm ----
 

@@ -3,3 +3,71 @@
 @code {
 
 }
+@page "/manager/revenue-report"
+@inject IReportService ReportService
+
+<h3>Báo cáo doanh thu & công suất phòng</h3>
+
+<div class="row g-2 mb-3">
+    <div class="col-md-2">
+        <select class="form-control" @bind="selectedMonth">
+            @for (int m = 1; m <= 12; m++)
+            {
+                <option value="@m">Tháng @m</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <input class="form-control" type="number" @bind="selectedYear" />
+    </div>
+    <div class="col-md-2">
+        <button class="btn btn-primary w-100" @onclick="HandleGenerateClick">Xem báo cáo</button>
+    </div>
+</div>
+
+@if (generated)
+{
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="card p-3">
+                <span>Tổng doanh thu tháng @selectedMonth/@selectedYear</span>
+                <h4>@totalRevenue.ToString("N0") đ</h4>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card p-3">
+                <span>Công suất phòng (30 ngày gần nhất)</span>
+                <h4>@occupancyRate %</h4>
+            </div>
+        </div>
+    </div>
+
+    <h5>Doanh thu theo loại phòng</h5>
+    <table class="table table-bordered">
+        <thead><tr><th>Loại phòng</th><th>Doanh thu</th></tr></thead>
+        <tbody>
+            @foreach (var item in revenueByRoomType)
+            {
+                <tr><td>@item.RoomTypeName</td><td>@item.Revenue.ToString("N0") đ</td></tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private int selectedMonth = DateTime.Now.Month;
+    private int selectedYear = DateTime.Now.Year;
+    private bool generated = false;
+
+    private decimal totalRevenue;
+    private double occupancyRate;
+    private List<RevenueByRoomType> revenueByRoomType = new();
+
+    private async Task HandleGenerateClick()
+    {
+        totalRevenue = await ReportService.GetMonthlyRevenueAsync(selectedYear, selectedMonth);
+        occupancyRate = await ReportService.GetOccupancyRateAsync(DateTime.Now.AddDays(-30), DateTime.Now);
+        revenueByRoomType = await ReportService.GetRevenueByRoomTypeAsync(selectedYear, selectedMonth);
+        generated = true;
+    }
+}
