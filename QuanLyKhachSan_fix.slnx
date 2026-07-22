@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="QuanLyKhachSan_fix/QuanLyKhachSan_fix.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
+</Solution>
