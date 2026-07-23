@@ -1,0 +1,72 @@
+﻿@page "/"
+@page "/login"
+@inject IAuthService AuthService
+@inject CurrentUserState CurrentUserState
+@inject NavigationManager NavManager
+
+<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card p-4" style="width: 400px;">
+        <h3 class="text-center mb-3">Đăng nhập</h3>
+
+        <div class="mb-2">
+            <label>Tên đăng nhập</label>
+            <input class="form-control" @bind="username" />
+        </div>
+        <div class="mb-2">
+            <label>Mật khẩu</label>
+            <input class="form-control" type="password" @bind="password" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p class="text-danger">@errorMessage</p>
+        }
+
+        <button class="btn btn-dark w-100 mt-2" @onclick="HandleLoginClick" disabled="@loading">
+            @(loading ? "Đang xử lý..." : "Đăng nhập")
+        </button>
+
+        <p class="text-center mt-3">
+            Chưa có tài khoản? <a href="/register">Đăng ký</a>
+        </p>
+    </div>
+</div>
+
+@code {
+    private string username = "";
+    private string password = "";
+    private string errorMessage = "";
+    private bool loading = false;
+
+    private async Task HandleLoginClick()
+    {
+        errorMessage = "";
+        loading = true;
+
+        var result = await AuthService.LoginAsync(username, password);
+
+        loading = false;
+
+        if (!result.Success)
+        {
+            errorMessage = result.ErrorMessage ?? "Đăng nhập thất bại.";
+            return;
+        }
+
+        CurrentUserState.SetUser(result.User!);
+
+        // Dieu huong theo Role
+        switch (result.User!.Role)
+        {
+            case "manager":
+                NavManager.NavigateTo("/manager/dashboard");
+                break;
+            case "receptionist":
+                NavManager.NavigateTo("/receptionist/dashboard");
+                break;
+            default: // "customer"
+                NavManager.NavigateTo("/customer/home");
+                break;
+        }
+    }
+}

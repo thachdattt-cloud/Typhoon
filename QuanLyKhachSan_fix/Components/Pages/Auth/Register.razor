@@ -1,5 +1,74 @@
-﻿<h3>Register</h3>
+﻿@page "/register"
+@inject IAuthService AuthService
+@inject CurrentUserState CurrentUserState
+@inject NavigationManager NavManager
+
+<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card p-4" style="width: 420px;">
+        <h3 class="text-center mb-3">Đăng ký tài khoản</h3>
+
+        <div class="mb-2">
+            <label>Tên đăng nhập</label>
+            <input class="form-control" @bind="username" />
+        </div>
+        <div class="mb-2">
+            <label>Mật khẩu</label>
+            <input class="form-control" type="password" @bind="password" />
+        </div>
+        <div class="mb-2">
+            <label>Họ tên</label>
+            <input class="form-control" @bind="fullName" />
+        </div>
+        <div class="mb-2">
+            <label>Email</label>
+            <input class="form-control" @bind="email" />
+        </div>
+        <div class="mb-2">
+            <label>Số điện thoại</label>
+            <input class="form-control" @bind="phone" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p class="text-danger">@errorMessage</p>
+        }
+
+        <button class="btn btn-dark w-100 mt-2" @onclick="HandleRegisterClick" disabled="@loading">
+            @(loading ? "Đang xử lý..." : "Đăng ký")
+        </button>
+
+        <p class="text-center mt-3">
+            Đã có tài khoản? <a href="/login">Đăng nhập</a>
+        </p>
+    </div>
+</div>
 
 @code {
+    private string username = "";
+    private string password = "";
+    private string fullName = "";
+    private string email = "";
+    private string phone = "";
+    private string errorMessage = "";
+    private bool loading = false;
 
+    private async Task HandleRegisterClick()
+    {
+        errorMessage = "";
+        loading = true;
+
+        var result = await AuthService.RegisterAsync(username, password, fullName, email, phone);
+
+        loading = false;
+
+        if (!result.Success)
+        {
+            errorMessage = result.ErrorMessage ?? "Đăng ký thất bại.";
+            return;
+        }
+
+        // Dang ky xong tu dong dang nhap luon, chuyen thang vao trang chu khach hang
+        CurrentUserState.SetUser(result.User!);
+        NavManager.NavigateTo("/customer/home");
+    }
 }
