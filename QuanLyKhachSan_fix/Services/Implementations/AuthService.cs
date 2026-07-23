@@ -65,6 +65,12 @@ namespace QuanLyKhachSan_fix.Services.Implementations
                 return new AuthResult { Success = false, ErrorMessage = "Tên đăng nhập đã được sử dụng." };
             }
 
+            bool emailExists = await db.Users.AnyAsync(u => u.Email == email);
+            if (emailExists)
+            {
+                return new AuthResult { Success = false, ErrorMessage = "Email này đã được đăng ký." };
+            }
+
             var newUser = new User
             {
                 Username = username,
@@ -77,8 +83,16 @@ namespace QuanLyKhachSan_fix.Services.Implementations
                 CreatedAt = DateTime.Now
             };
 
-            db.Users.Add(newUser);
-            await db.SaveChangesAsync();
+            try
+            {
+                db.Users.Add(newUser);
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                // Phong truong hop 2 nguoi bam dang ky cung luc voi cung email/username (race condition)
+                return new AuthResult { Success = false, ErrorMessage = "Tên đăng nhập hoặc email đã tồn tại." };
+            }
 
             return new AuthResult { Success = true, User = newUser };
         }
