@@ -1,5 +1,6 @@
 ﻿@page "/receptionist/invoice"
 @inject IInvoiceService InvoiceService
+@using InvoiceModel = QuanLyKhachSan_fix.Models.Invoice
 
 <h3>Xuất hóa đơn</h3>
 
@@ -88,7 +89,7 @@ else
     private bool loading = true;
     private List<Booking> pendingBookings = new();
     private Dictionary<int, decimal> pendingTotals = new();
-    private List<Invoice> invoices = new();
+    private List<InvoiceModel> invoices = new();
     private int staffId;
     private string errorMessage = "";
 
@@ -124,7 +125,7 @@ else
         var result = await InvoiceService.CreateInvoiceAsync(bookingId, staffId);
         if (!result.Success)
         {
-            errorMessage = result.ErrorMessage;
+            errorMessage = result.ErrorMessage ?? "";
             return;
         }
 

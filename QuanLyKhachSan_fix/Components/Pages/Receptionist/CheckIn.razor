@@ -114,7 +114,7 @@ else
         var result = await CheckInOutService.CheckInAsync(bookingDetailId, staffId);
         if (!result.Success)
         {
-            errorMessage = result.ErrorMessage;
+            errorMessage = result.ErrorMessage ?? "";
             return;
         }
 
