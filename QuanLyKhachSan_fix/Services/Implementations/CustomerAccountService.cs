@@ -13,16 +13,17 @@ namespace QuanLyKhachSan_fix.Services.Implementations
 {
     public class CustomerAccountService : ICustomerAccountService
     {
-        private readonly AppDbContext _db;
+        private readonly IDbContextFactory<AppDbContext> _dbFactory;
 
-        public CustomerAccountService(AppDbContext db)
+        public CustomerAccountService(IDbContextFactory<AppDbContext> dbFactory)
         {
-            _db = db;
+            _dbFactory = dbFactory;
         }
 
         public async Task<List<User>> GetAllCustomersAsync()
         {
-            return await _db.Users
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.Users
                 .Where(u => u.Role == "customer")
                 .OrderBy(u => u.FullName)
                 .ToListAsync();
@@ -30,17 +31,20 @@ namespace QuanLyKhachSan_fix.Services.Implementations
 
         public async Task<bool> ToggleActiveAsync(int userId)
         {
-            var user = await _db.Users.FindAsync(userId);
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var user = await db.Users.FindAsync(userId);
             if (user == null || user.Role != "customer") return false;
 
             user.IsActive = !user.IsActive;
-            await _db.SaveChangesAsync();
+            await db.SaveChangesAsync();
             return true;
         }
 
         public async Task<List<Booking>> GetBookingHistoryAsync(int userId)
         {
-            return await _db.Bookings
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.Bookings
                 .Where(b => b.CustomerId == userId)
                 .Include(b => b.BookingDetails)
                     .ThenInclude(bd => bd.Room)
