@@ -1,5 +1,40 @@
-﻿<h3>Home</h3>
+﻿@page "/customer/home"
+@using QuanLyKhachSan_fix.Models
+@inject NavigationManager NavigationManager
+
+<div class="customer-home">
+    <h3>Trang chủ khách hàng</h3>
+    <p class="text-muted">Chọn một chức năng bên dưới để bắt đầu.</p>
+
+    <div class="row g-3 customer-home-cards">
+        <div class="col-md-6">
+            <div class="card customer-home-card" @onclick="HandleRoomSearchClick">
+                <div class="card-body">
+                    <h5 class="card-title">🔍 Tìm phòng</h5>
+                    <p class="card-text">Tìm phòng trống theo ngày nhận / trả phòng.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card customer-home-card" @onclick="HandleMyBookingsClick">
+                <div class="card-body">
+                    <h5 class="card-title">📖 Đặt phòng của tôi</h5>
+                    <p class="card-text">Xem, thanh toán, hủy hoặc gửi yêu cầu gia hạn / đổi phòng.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
+    private void HandleRoomSearchClick()
+    {
+        NavigationManager.NavigateTo("/customer/room-search");
+    }
 
+    private void HandleMyBookingsClick()
+    {
+        NavigationManager.NavigateTo("/customer/my-bookings");
+    }
 }

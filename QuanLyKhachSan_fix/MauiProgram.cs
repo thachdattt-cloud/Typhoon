@@ -22,7 +22,7 @@ namespace QuanLyKhachSan_fix
 
             // ---- Thêm phần này ----
 
-            const string connectionString = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=QuanLyKhachSan;Integrated Security=True";
+            const string connectionString = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=Hotel;Integrated Security=True";
 
             builder.Services.AddDbContextFactory<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
