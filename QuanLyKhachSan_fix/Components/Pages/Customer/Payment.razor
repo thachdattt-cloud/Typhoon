@@ -1,5 +1,148 @@
-﻿<h3>Payment</h3>
+﻿@page "/customer/payment"
+@using System.Linq
+@using QuanLyKhachSan_fix.Models
+@using QuanLyKhachSan_fix.Services.Interfaces
+@using QuanLyKhachSan_fix.Services.AppState
+@inject IBookingService BookingService
+@inject IPaymentService PaymentService
+@inject CurrentUserState UserState
+
+<div class="payment-page">
+    <h3>Thanh toán</h3>
+
+    @if (UserState.CurrentUser == null)
+    {
+        <p class="error-text">Vui lòng đăng nhập trước. <a href="/">Về trang chủ</a></p>
+    }
+    else if (isLoading)
+    {
+        <p>Đang tải...</p>
+    }
+    else if (booking == null)
+    {
+        <p class="error-text">Không tìm thấy đặt phòng. <a href="/customer/my-bookings">Quay lại</a></p>
+    }
+    else
+    {
+        <p><strong>Mã đặt phòng:</strong> @booking.BookingCode</p>
+        <p><strong>Tổng tiền:</strong> @booking.TotalAmount?.ToString("N0") VND</p>
+        <p><strong>Còn phải thanh toán:</strong> @outstanding.ToString("N0") VND</p>
+
+        @if (outstanding > 0)
+        {
+            <div class="mb-3" style="max-width:300px">
+                <label class="form-label">Hình thức thanh toán</label>
+                <select class="form-select" @bind="paymentMethod">
+                    <option value="online">Thanh toán online</option>
+                    <option value="cash">Tiền mặt tại quầy</option>
+                </select>
+            </div>
+
+            <div class="mb-3" style="max-width:200px">
+                <label class="form-label">Số tiền</label>
+                <input type="number" class="form-control" @bind="amount" />
+            </div>
+
+            <button class="btn btn-primary" @onclick="HandlePayClick" disabled="@isSubmitting">
+                @(isSubmitting ? "Đang xử lý..." : "Thanh toán")
+            </button>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <p class="error-text mt-2">@errorMessage</p>
+            }
+        }
+        else
+        {
+            <p class="text-success">Đặt phòng này đã được thanh toán đầy đủ.</p>
+        }
+
+        @if (payments is { Count: > 0 })
+        {
+            <h5 class="mt-4">Lịch sử thanh toán</h5>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Ngày</th>
+                        <th>Số tiền</th>
+                        <th>Hình thức</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in payments)
+                    {
+                        <tr>
+                            <td>@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@p.Amount.ToString("N0") VND</td>
+                            <td>@(p.PaymentMethod == "online" ? "Online" : "Tiền mặt")</td>
+                            <td>@p.PaymentStatus</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+</div>
 
 @code {
+    [SupplyParameterFromQuery] public int BookingId { get; set; }
 
+    private QuanLyKhachSan_fix.Models.Booking? booking;
+    private List<QuanLyKhachSan_fix.Models.Payment>? payments;
+    private decimal outstanding;
+    private decimal amount;
+    private string paymentMethod = "online";
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (UserState.CurrentUser == null)
+        {
+            isLoading = false;
+            return;
+        }
+
+        await LoadAsync();
+        isLoading = false;
+    }
+
+    private async Task LoadAsync()
+    {
+        booking = await BookingService.GetBookingByIdAsync(BookingId);
+        if (booking == null) return;
+
+        payments = await PaymentService.GetPaymentsByBookingAsync(BookingId);
+        decimal paid = payments.Where(p => p.PaymentStatus == "success").Sum(p => p.Amount);
+        outstanding = (booking.TotalAmount ?? 0) - paid;
+        if (outstanding < 0) outstanding = 0;
+        amount = outstanding;
+    }
+
+    private async Task HandlePayClick()
+    {
+        errorMessage = null;
+
+        if (amount <= 0 || amount > outstanding)
+        {
+            errorMessage = "Số tiền thanh toán không hợp lệ.";
+            return;
+        }
+
+        isSubmitting = true;
+
+        var result = await PaymentService.CreatePaymentAsync(BookingId, amount, paymentMethod);
+
+        isSubmitting = false;
+
+        if (!result.Success)
+        {
+            errorMessage = result.ErrorMessage;
+            return;
+        }
+
+        await LoadAsync();
+    }
 }

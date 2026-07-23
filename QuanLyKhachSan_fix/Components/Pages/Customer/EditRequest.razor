@@ -1,5 +1,145 @@
-﻿<h3>EditRequest</h3>
+﻿@page "/customer/edit-request"
+@using System.Linq
+@using QuanLyKhachSan_fix.Models
+@using QuanLyKhachSan_fix.Services.Interfaces
+@using QuanLyKhachSan_fix.Services.AppState
+@inject IBookingService BookingService
+@inject IRoomService RoomService
+@inject IBookingEditRequestService EditRequestService
+@inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
+
+<div class="edit-request-page">
+    <h3>Gia hạn / Đổi phòng</h3>
+
+    @if (UserState.CurrentUser == null)
+    {
+        <p class="error-text">Vui lòng đăng nhập trước. <a href="/">Về trang chủ</a></p>
+    }
+    else if (isLoading)
+    {
+        <p>Đang tải...</p>
+    }
+    else if (detail == null || booking == null)
+    {
+        <p class="error-text">Không tìm thấy đặt phòng này. <a href="/customer/my-bookings">Quay lại</a></p>
+    }
+    else if (submitted)
+    {
+        <p class="text-success">Yêu cầu đã được gửi, vui lòng chờ lễ tân duyệt.</p>
+        <a href="/customer/my-bookings">Quay lại "Đặt phòng của tôi"</a>
+    }
+    else
+    {
+        <p><strong>Phòng hiện tại:</strong> @detail.Room.RoomNumber - @detail.Room.RoomType.Name</p>
+        <p><strong>Trả phòng hiện tại:</strong> @booking.CheckOutDate.ToString("dd/MM/yyyy")</p>
+
+        <div class="mb-3" style="max-width:300px">
+            <label class="form-label">Loại yêu cầu</label>
+            <select class="form-select" @bind="requestType">
+                <option value="extend">Gia hạn ngày trả phòng</option>
+                <option value="change_room">Đổi phòng khác</option>
+            </select>
+        </div>
+
+        @if (requestType == "extend")
+        {
+            <div class="mb-3" style="max-width:300px">
+                <label class="form-label">Ngày trả phòng mới</label>
+                <input type="date" class="form-control" @bind="newCheckOutDate" />
+            </div>
+        }
+        else
+        {
+            <div class="mb-3" style="max-width:300px">
+                <label class="form-label">Chọn phòng mới</label>
+                <button class="btn btn-outline-secondary btn-sm mb-2" @onclick="LoadOtherRoomsAsync">Xem phòng trống</button>
+
+                @if (otherRooms is { Count: > 0 })
+                {
+                    <select class="form-select" @bind="newRoomId">
+                        <option value="0">-- Chọn phòng --</option>
+                        @foreach (var r in otherRooms)
+                        {
+                            <option value="@r.Id">@r.RoomNumber - @r.RoomType.Name (@r.RoomType.BasePrice?.ToString("N0") VND/đêm)</option>
+                        }
+                    </select>
+                }
+            </div>
+        }
+
+        <button class="btn btn-primary" @onclick="HandleSubmitClick" disabled="@isSubmitting">
+            @(isSubmitting ? "Đang gửi..." : "Gửi yêu cầu")
+        </button>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p class="error-text mt-2">@errorMessage</p>
+        }
+    }
+</div>
 
 @code {
+    [SupplyParameterFromQuery] public int BookingId { get; set; }
+    [SupplyParameterFromQuery] public int BookingDetailId { get; set; }
 
+    private QuanLyKhachSan_fix.Models.Booking? booking;
+    private BookingDetail? detail;
+    private List<Room>? otherRooms;
+    private string requestType = "extend";
+    private DateTime newCheckOutDate = DateTime.Today.AddDays(1);
+    private int newRoomId;
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private bool submitted = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (UserState.CurrentUser == null)
+        {
+            isLoading = false;
+            return;
+        }
+
+        booking = await BookingService.GetBookingByIdAsync(BookingId);
+        detail = booking?.BookingDetails.FirstOrDefault(d => d.Id == BookingDetailId);
+
+        if (booking != null)
+        {
+            newCheckOutDate = booking.CheckOutDate.AddDays(1);
+        }
+
+        isLoading = false;
+    }
+
+    private async Task LoadOtherRoomsAsync()
+    {
+        if (booking == null || detail == null) return;
+
+        var available = await RoomService.SearchAvailableRoomsAsync(booking.CheckInDate, booking.CheckOutDate);
+        otherRooms = available.Where(r => r.Id != detail.RoomId).ToList();
+    }
+
+    private async Task HandleSubmitClick()
+    {
+        if (detail == null) return;
+
+        errorMessage = null;
+        isSubmitting = true;
+
+        var result = requestType == "extend"
+            ? await EditRequestService.CreateExtendRequestAsync(detail.Id, newCheckOutDate.Date)
+            : await EditRequestService.CreateChangeRoomRequestAsync(detail.Id, newRoomId);
+
+        isSubmitting = false;
+
+        if (!result.Success)
+        {
+            errorMessage = result.ErrorMessage;
+            return;
+        }
+
+        submitted = true;
+    }
 }
