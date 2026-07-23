@@ -1,4 +1,7 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@inject CurrentUserState CurrentUserState
+@inject NavigationManager NavManager
+@implements IDisposable
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">QuanLyKhachSan_fix</a>
     </div>
@@ -24,29 +27,64 @@
             </NavLink>
         </div>
     </nav>
-    <div class="nav-item px-3">
-        <NavLink class="nav-link" href="manager/dashboard">
-            <span class="bi bi-speedometer2" aria-hidden="true"></span> Quản lý - Dashboard
-        </NavLink>
-    </div>
-    <div class="nav-item px-3">
-        <NavLink class="nav-link" href="manager/room-types">
-            <span class="bi bi-house-door" aria-hidden="true"></span> Loại phòng & giá
-        </NavLink>
-    </div>
-    <div class="nav-item px-3">
-        <NavLink class="nav-link" href="manager/employees">
-            <span class="bi bi-people" aria-hidden="true"></span> Quản lý nhân viên
-        </NavLink>
-    </div>
-    <div class="nav-item px-3">
-        <NavLink class="nav-link" href="manager/customers">
-            <span class="bi bi-person-check" aria-hidden="true"></span> Tài khoản khách hàng
-        </NavLink>
-    </div>
-    <div class="nav-item px-3">
-        <NavLink class="nav-link" href="manager/revenue-report">
-            <span class="bi bi-graph-up" aria-hidden="true"></span> Báo cáo doanh thu
-        </NavLink>
-    </div>
+    @if (CurrentUserState.IsLoggedIn)
+    {
+        <div class="nav-item px-3 py-2">
+            <span class="text-white">Xin chào, @CurrentUserState.CurrentUser!.FullName</span>
+        </div>
+        <div class="nav-item px-3">
+            <button class="nav-link btn btn-link text-start p-0" @onclick="HandleLogoutClick">
+                <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Đăng xuất
+            </button>
+        </div>
+    }
+    @if (CurrentUserState.CurrentUser?.Role == "manager")
+    {
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="manager/dashboard">
+                <span class="bi bi-speedometer2" aria-hidden="true"></span> Quản lý - Dashboard
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="manager/room-types">
+                <span class="bi bi-house-door" aria-hidden="true"></span> Loại phòng & giá
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="manager/employees">
+                <span class="bi bi-people" aria-hidden="true"></span> Quản lý nhân viên
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="manager/customers">
+                <span class="bi bi-person-check" aria-hidden="true"></span> Tài khoản khách hàng
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="manager/revenue-report">
+                <span class="bi bi-graph-up" aria-hidden="true"></span> Báo cáo doanh thu
+            </NavLink>
+        </div>
+    }
 </div>
+@code {
+    protected override void OnInitialized()
+    {
+        CurrentUserState.OnChange += HandleUserStateChanged;
+    }
+
+    private void HandleUserStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        CurrentUserState.OnChange -= HandleUserStateChanged;
+    }
+    private void HandleLogoutClick()
+    {
+        CurrentUserState.ClearUser();
+        NavManager.NavigateTo("/login");
+    }
+}
