@@ -1,25 +1,23 @@
 ﻿@page "/receptionist/check-in"
 @inject ICheckInOutService CheckInOutService
+@inject QuanLyKhachSan_fix.Services.AppState.CurrentUserState CurrentUserState
 
 <h3>Nhận phòng</h3>
 
 <div class="card p-3 mb-3">
     <div class="row g-2 align-items-end">
-        <div class="col-md-4">
+        <div class="col-md-5">
             <label class="form-label">Mã đặt phòng</label>
             <input class="form-control" placeholder="VD: BK0001" @bind="searchBookingCode" />
         </div>
         <div class="col-md-3">
-            <label class="form-label">Mã nhân viên (bạn)</label>
-            <input class="form-control" type="number" @bind="staffId" />
-        </div>
-        <div class="col-md-2">
             <button class="btn btn-primary w-100" @onclick="HandleSearchClick">Tìm</button>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <button class="btn btn-outline-secondary w-100" @onclick="HandleShowTodayClick">Khách đến hôm nay</button>
         </div>
     </div>
+    <p class="text-muted mt-2 mb-0">Nhân viên thực hiện: @(CurrentUserState.CurrentUser?.FullName ?? "Chưa đăng nhập")</p>
     @if (!string.IsNullOrEmpty(errorMessage))
     {
         <p class="text-danger mt-2">@errorMessage</p>
@@ -71,7 +69,6 @@ else
     private bool loading = true;
     private List<BookingDetail> bookingDetails = new();
     private string searchBookingCode = "";
-    private int staffId;
     private string errorMessage = "";
 
     protected override async Task OnInitializedAsync()
@@ -105,13 +102,14 @@ else
     private async Task HandleCheckInClick(int bookingDetailId)
     {
         errorMessage = "";
-        if (staffId <= 0)
+        var staffId = CurrentUserState.CurrentUser?.Id;
+        if (staffId == null || staffId <= 0)
         {
-            errorMessage = "Vui lòng nhập mã nhân viên của bạn.";
+            errorMessage = "Bạn cần đăng nhập trước khi thực hiện thao tác này.";
             return;
         }
 
-        var result = await CheckInOutService.CheckInAsync(bookingDetailId, staffId);
+        var result = await CheckInOutService.CheckInAsync(bookingDetailId, staffId.Value);
         if (!result.Success)
         {
             errorMessage = result.ErrorMessage ?? "";

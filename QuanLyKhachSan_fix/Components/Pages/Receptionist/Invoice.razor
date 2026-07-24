@@ -1,15 +1,15 @@
 ﻿@page "/receptionist/invoice"
 @inject IInvoiceService InvoiceService
+@inject QuanLyKhachSan_fix.Services.AppState.CurrentUserState CurrentUserState
 @using InvoiceModel = QuanLyKhachSan_fix.Models.Invoice
 
 <h3>Xuất hóa đơn</h3>
 
 <div class="card p-3 mb-3">
-    <label class="form-label">Mã nhân viên (bạn)</label>
-    <input class="form-control" style="max-width:200px" type="number" @bind="staffId" />
+    <p class="text-muted mb-0">Nhân viên thực hiện: @(CurrentUserState.CurrentUser?.FullName ?? "Chưa đăng nhập")</p>
     @if (!string.IsNullOrEmpty(errorMessage))
     {
-        <p class="text-danger mt-2">@errorMessage</p>
+        <p class="text-danger mt-2 mb-0">@errorMessage</p>
     }
 </div>
 
@@ -90,7 +90,6 @@ else
     private List<Booking> pendingBookings = new();
     private Dictionary<int, decimal> pendingTotals = new();
     private List<InvoiceModel> invoices = new();
-    private int staffId;
     private string errorMessage = "";
 
     protected override async Task OnInitializedAsync()
@@ -116,13 +115,14 @@ else
     private async Task HandleCreateInvoiceClick(int bookingId)
     {
         errorMessage = "";
-        if (staffId <= 0)
+        var staffId = CurrentUserState.CurrentUser?.Id;
+        if (staffId == null || staffId <= 0)
         {
-            errorMessage = "Vui lòng nhập mã nhân viên của bạn.";
+            errorMessage = "Bạn cần đăng nhập trước khi thực hiện thao tác này.";
             return;
         }
 
-        var result = await InvoiceService.CreateInvoiceAsync(bookingId, staffId);
+        var result = await InvoiceService.CreateInvoiceAsync(bookingId, staffId.Value);
         if (!result.Success)
         {
             errorMessage = result.ErrorMessage ?? "";
