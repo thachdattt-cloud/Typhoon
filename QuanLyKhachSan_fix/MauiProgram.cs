@@ -23,7 +23,7 @@ namespace QuanLyKhachSan_fix
 
             // ---- Thêm phần này ----
 
-            const string connectionString = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=Hotel;Integrated Security=True";
+            const string connectionString = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=QuanLyKhachSan;Integrated Security=True";
 
             builder.Services.AddDbContextFactory<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
@@ -35,9 +35,9 @@ namespace QuanLyKhachSan_fix
             builder.Services.AddScoped<IReportService, ReportService>();
             builder.Services.AddScoped<CurrentUserState>();
             // TODO: 2 thanh vien con lai them dong dang ky Service cua minh vao day
-            // builder.Services.AddScoped<IBookingService, BookingService>();       // Thanh vien 1
-            // builder.Services.AddScoped<IPaymentService, PaymentService>();       // Thanh vien 1
-            // builder.Services.AddScoped<IBookingEditRequestService, BookingEditRequestService>(); // Thanh vien 1
+            builder.Services.AddScoped<IBookingService, BookingService>();       // Thanh vien 1
+            builder.Services.AddScoped<IPaymentService, PaymentService>();       // Thanh vien 1
+            builder.Services.AddScoped<IBookingEditRequestService, BookingEditRequestService>(); // Thanh vien 1
             // builder.Services.AddScoped<ICheckInOutService, CheckInOutService>(); // Thanh vien 2
             // builder.Services.AddScoped<IInvoiceService, InvoiceService>();       // Thanh vien 2
 

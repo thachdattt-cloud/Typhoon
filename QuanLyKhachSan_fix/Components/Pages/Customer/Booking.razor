@@ -2,48 +2,74 @@
 @using System.Linq
 @using QuanLyKhachSan_fix.Models
 @using QuanLyKhachSan_fix.Services.Interfaces
-@using QuanLyKhachSan_fix.Services.AppState
+@using QuanLyKhachSan_fix.Services
 @inject IRoomService RoomService
 @inject IBookingService BookingService
 @inject CurrentUserState UserState
 @inject NavigationManager NavigationManager
 
-<div class="booking-page">
-    <h3>Xác nhận đặt phòng</h3>
+<div class="container mt-4">
+    <h3 class="mb-4 fw-bold">Xác nhận đặt phòng</h3>
 
     @if (UserState.CurrentUser == null)
     {
-        <p class="error-text">Vui lòng đăng nhập trước khi đặt phòng. <a href="/">Về trang chủ</a></p>
+        <div class="alert alert-danger">Vui lòng đăng nhập trước khi đặt phòng. <a href="/login">Đăng nhập</a></div>
     }
     else if (isLoading)
     {
-        <p>Đang tải thông tin phòng...</p>
+        <div class="d-flex justify-content-center"><div class="spinner-border text-primary"></div></div>
     }
-    else if (room == null)
+    else if (room != null)
     {
-        <p class="error-text">Phòng không còn trống trong khoảng thời gian này. <a href="/customer/room-search">Tìm phòng khác</a></p>
-    }
-    else
-    {
-        <div class="booking-info">
-            <p><strong>Phòng:</strong> @room.RoomNumber - @room.RoomType.Name (@room.RoomType.BasePrice?.ToString("N0") VND/đêm)</p>
-            <p><strong>Nhận phòng:</strong> @checkInDate.ToString("dd/MM/yyyy") &nbsp; <strong>Trả phòng:</strong> @checkOutDate.ToString("dd/MM/yyyy") (@nights đêm)</p>
-
-            <div class="mb-3" style="max-width:200px">
-                <label class="form-label">Số khách</label>
-                <input type="number" min="1" max="@(room.RoomType.MaxCapacity ?? 20)" class="form-control" @bind="guestCount" />
+        <div class="row g-4">
+            <!-- Cột trái: Thông tin -->
+            <div class="col-md-8">
+                <div class="card shadow-sm border-0 p-4 h-100">
+                    <h5 class="text-primary mb-3">Thông tin nhận phòng</h5>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 text-muted">Phòng đã chọn:</div>
+                        <div class="col-sm-8 fw-bold">@room.RoomNumber - @room.RoomType.Name</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 text-muted">Thời gian:</div>
+                        <div class="col-sm-8">
+                            @checkInDate.ToString("dd/MM/yyyy") <i class="bi bi-arrow-right mx-2"></i> @checkOutDate.ToString("dd/MM/yyyy")
+                            <span class="badge bg-info ms-2">@nights đêm</span>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-sm-4 text-muted mt-2">Số khách thực tế:</div>
+                        <div class="col-sm-4">
+                            <input type="number" min="1" max="@(room.RoomType.MaxCapacity ?? 20)" class="form-control" @bind="guestCount" />
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <h5>Tổng tiền: @totalAmount.ToString("N0") VND</h5>
+            <!-- Cột phải: Thanh toán & Xác nhận -->
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 p-4 h-100 bg-light">
+                    <h5 class="mb-4">Tóm tắt chi phí</h5>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Giá mỗi đêm:</span>
+                        <span>@room.RoomType.BasePrice?.ToString("N0") đ</span>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between mb-4">
+                        <strong class="fs-5">Tổng tiền:</strong>
+                        <strong class="fs-5 text-danger">@totalAmount.ToString("N0") đ</strong>
+                    </div>
 
-            <button class="btn btn-primary mt-2" @onclick="HandleConfirmClick" disabled="@isSubmitting">
-                @(isSubmitting ? "Đang xử lý..." : "Xác nhận đặt phòng")
-            </button>
+                    <button class="btn btn-primary btn-lg w-100" @onclick="HandleConfirmClick" disabled="@isSubmitting">
+                        @(isSubmitting ? "Đang xử lý..." : "Xác nhận đặt phòng")
+                    </button>
 
-            @if (!string.IsNullOrEmpty(errorMessage))
-            {
-                <p class="error-text mt-2">@errorMessage</p>
-            }
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger mt-3 py-2">@errorMessage</div>
+                    }
+                </div>
+            </div>
         </div>
     }
 </div>

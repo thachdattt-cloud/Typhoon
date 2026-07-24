@@ -1,36 +1,44 @@
-﻿@page "/"
-@page "/login"
+﻿@page "/login"
 @inject IAuthService AuthService
 @inject CurrentUserState CurrentUserState
 @inject NavigationManager NavManager
 
 <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
-    <div class="card p-4" style="width: 400px;">
-        <h3 class="text-center mb-3">Đăng nhập</h3>
+    <div class="card shadow-sm border-0 p-4" style="width: 400px; border-radius: 12px;">
+        <h3 class="text-center mb-4 fw-bold">Đăng nhập</h3>
 
-        <div class="mb-2">
-            <label>Tên đăng nhập</label>
-            <input class="form-control" @bind="username" />
+        <div class="form-floating mb-3">
+            <input class="form-control" id="username" placeholder="Tên đăng nhập" @bind="username" />
+            <label for="username">Tên đăng nhập</label>
         </div>
-        <div class="mb-2">
-            <label>Mật khẩu</label>
-            <input class="form-control" type="password" @bind="password" />
+        <div class="form-floating mb-3">
+            <input type="password" class="form-control" id="password" placeholder="Mật khẩu" @bind="password" />
+            <label for="password">Mật khẩu</label>
         </div>
 
         @if (!string.IsNullOrEmpty(errorMessage))
         {
-            <p class="text-danger">@errorMessage</p>
+            <div class="alert alert-danger py-2">@errorMessage</div>
         }
 
-        <button class="btn btn-dark w-100 mt-2" @onclick="HandleLoginClick" disabled="@loading">
-            @(loading ? "Đang xử lý..." : "Đăng nhập")
+        <button class="btn btn-primary btn-lg w-100 mt-2" @onclick="HandleLoginClick" disabled="@loading">
+            @if (loading)
+            {
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span>Đang xử lý...</span>
+            }
+            else
+            {
+                <span>Đăng nhập</span>
+            }
         </button>
 
-        <p class="text-center mt-3">
-            Chưa có tài khoản? <a href="/register">Đăng ký</a>
+        <p class="text-center mt-3 mb-0 text-muted">
+            Chưa có tài khoản? <a href="/register" class="text-decoration-none fw-bold">Đăng ký ngay</a>
         </p>
     </div>
 </div>
+
 
 @code {
     private string username = "";

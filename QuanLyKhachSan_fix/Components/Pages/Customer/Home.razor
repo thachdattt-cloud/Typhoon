@@ -1,31 +1,78 @@
-﻿@page "/customer/home"
+﻿
+@page "/customer/home"
 @using QuanLyKhachSan_fix.Models
+@using QuanLyKhachSan_fix.Services
 @inject NavigationManager NavigationManager
+@inject CurrentUserState UserState
 
-<div class="customer-home">
-    <h3>Trang chủ khách hàng</h3>
-    <p class="text-muted">Chọn một chức năng bên dưới để bắt đầu.</p>
+<div class="container mt-4">
+    <!-- Banner Chào Mừng -->
+    <div class="bg-primary bg-gradient text-white p-4 rounded-3 shadow-sm mb-4">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h2 class="fw-bold mb-1">
+                    Xin chào@(UserState.CurrentUser != null ? $", {UserState.CurrentUser.FullName}" : "")! 👋
+                </h2>
+                <p class="mb-0 opacity-75">
+                    Chào mừng bạn đến với hệ thống dịch vụ khách sạn. Chọn dịch vụ bên dưới để bắt đầu trải nghiệm!
+                </p>
+            </div>
+        </div>
+    </div>
 
-    <div class="row g-3 customer-home-cards">
+    <!-- Các thẻ chức năng chính -->
+    <h4 class="fw-bold mb-3 text-secondary">Dịch vụ dành cho bạn</h4>
+
+    <div class="row g-4">
+        <!-- Thẻ 1: Tìm & Đặt phòng -->
         <div class="col-md-6">
-            <div class="card customer-home-card" @onclick="HandleRoomSearchClick">
-                <div class="card-body">
-                    <h5 class="card-title">🔍 Tìm phòng</h5>
-                    <p class="card-text">Tìm phòng trống theo ngày nhận / trả phòng.</p>
+            <div class="card border-0 shadow-sm h-100 customer-home-card"
+                 style="cursor: pointer; transition: all 0.2s ease-in-out;"
+                 @onclick="HandleRoomSearchClick">
+                <div class="card-body p-4 d-flex align-items-center">
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3 text-primary fs-2 d-flex align-items-center justify-content-center"
+                         style="width: 64px; height: 64px;">
+                        🔍
+                    </div>
+                    <div>
+                        <h5 class="card-title fw-bold mb-1 text-primary">Tìm & Đặt phòng</h5>
+                        <p class="card-text text-muted mb-0">
+                            Tra cứu phòng trống theo thời gian lưu trú, số lượng khách và tiến hành đặt phòng nhanh chóng.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
 
+        <!-- Thẻ 2: Quản lý Đặt phòng -->
         <div class="col-md-6">
-            <div class="card customer-home-card" @onclick="HandleMyBookingsClick">
-                <div class="card-body">
-                    <h5 class="card-title">📖 Đặt phòng của tôi</h5>
-                    <p class="card-text">Xem, thanh toán, hủy hoặc gửi yêu cầu gia hạn / đổi phòng.</p>
+            <div class="card border-0 shadow-sm h-100 customer-home-card"
+                 style="cursor: pointer; transition: all 0.2s ease-in-out;"
+                 @onclick="HandleMyBookingsClick">
+                <div class="card-body p-4 d-flex align-items-center">
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3 text-success fs-2 d-flex align-items-center justify-content-center"
+                         style="width: 64px; height: 64px;">
+                        📖
+                    </div>
+                    <div>
+                        <h5 class="card-title fw-bold mb-1 text-success">Đặt phòng của tôi</h5>
+                        <p class="card-text text-muted mb-0">
+                            Xem lịch sử các phòng đã đặt, thực hiện thanh toán, hủy đơn hoặc gửi yêu cầu gia hạn / đổi phòng.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- CSS bổ sung hiệu ứng Hover cho Card -->
+<style>
+    .customer-home-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.12) !important;
+    }
+</style>
 
 @code {
     private void HandleRoomSearchClick()

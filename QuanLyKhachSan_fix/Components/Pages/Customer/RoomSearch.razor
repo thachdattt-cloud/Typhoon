@@ -7,67 +7,76 @@
 @inject IRoomService RoomService
 @inject NavigationManager NavigationManager
 
-<div class="room-search">
-    <h3>Tìm phòng</h3>
 
-    <div class="row g-3 align-items-end room-search-form">
-        <div class="col-auto">
-            <label class="form-label">Ngày nhận phòng</label>
-            <input type="date" class="form-control" @bind="checkInDate" />
-        </div>
-        <div class="col-auto">
-            <label class="form-label">Ngày trả phòng</label>
-            <input type="date" class="form-control" @bind="checkOutDate" />
-        </div>
-        <div class="col-auto">
-            <label class="form-label">Số khách</label>
-            <input type="number" min="1" max="20" class="form-control" style="width:100px" @bind="guestCount" />
-        </div>
-        <div class="col-auto">
-            <button class="btn btn-primary" @onclick="HandleSearchClick" disabled="@isSearching">
-                @(isSearching ? "Đang tìm..." : "Tìm phòng trống")
-            </button>
+<div class="container mt-4">
+    <h3 class="mb-4 fw-bold">🔍 Tìm phòng trống</h3>
+
+    <!-- Khung tìm kiếm -->
+    <div class="card shadow-sm border-0 mb-4 p-3 bg-light">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+                <label class="form-label text-muted small mb-1">Ngày nhận phòng</label>
+                <input type="date" class="form-control" @bind="checkInDate" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small mb-1">Ngày trả phòng</label>
+                <input type="date" class="form-control" @bind="checkOutDate" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small mb-1">Số khách</label>
+                <input type="number" min="1" max="20" class="form-control" @bind="guestCount" />
+            </div>
+            <div class="col-md-4 mt-auto">
+                <button class="btn btn-primary w-100" @onclick="HandleSearchClick" disabled="@isSearching">
+                    @(isSearching ? "Đang tìm..." : "Tìm phòng ngay")
+                </button>
+            </div>
         </div>
     </div>
 
     @if (!string.IsNullOrEmpty(errorMessage))
     {
-        <p class="error-text mt-3">@errorMessage</p>
+        <div class="alert alert-warning">@errorMessage</div>
     }
 
+    <!-- Kết quả tìm kiếm -->
     @if (rooms is { Count: > 0 })
     {
-        <table class="table table-hover mt-3">
-            <thead>
-                <tr>
-                    <th>Số phòng</th>
-                    <th>Loại phòng</th>
-                    <th>Tầng</th>
-                    <th>Sức chứa</th>
-                    <th>Giá / đêm</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var room in rooms)
-                {
+        <div class="table-responsive shadow-sm rounded">
+            <table class="table table-hover align-middle mb-0 bg-white">
+                <thead class="table-light">
                     <tr>
-                        <td>@room.RoomNumber</td>
-                        <td>@room.RoomType.Name</td>
-                        <td>@room.Floor</td>
-                        <td>@room.RoomType.MaxCapacity</td>
-                        <td>@(room.RoomType.BasePrice?.ToString("N0")) VND</td>
-                        <td>
-                            <button class="btn btn-sm btn-success" @onclick="() => HandleSelectRoomClick(room)">
-                                Chọn phòng này
-                            </button>
-                        </td>
+                        <th>Phòng</th>
+                        <th>Loại phòng</th>
+                        <th>Tầng</th>
+                        <th>Sức chứa</th>
+                        <th>Giá / đêm</th>
+                        <th class="text-end">Thao tác</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var room in rooms)
+                    {
+                        <tr>
+                            <td><span class="badge bg-secondary">@room.RoomNumber</span></td>
+                            <td class="fw-bold text-primary">@room.RoomType.Name</td>
+                            <td>Tầng @room.Floor</td>
+                            <td>@room.RoomType.MaxCapacity khách</td>
+                            <td class="text-danger fw-bold">@(room.RoomType.BasePrice?.ToString("N0")) đ</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-success px-3" @onclick="() => HandleSelectRoomClick(room)">
+                                    Chọn phòng
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 </div>
+
+@* Phần @code giữ nguyên luồng xử lý như source[cite: 6] *@
 
 @code {
     private DateTime checkInDate = DateTime.Today;

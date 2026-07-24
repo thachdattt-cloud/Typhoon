@@ -2,60 +2,71 @@
 @using System.Linq
 @using QuanLyKhachSan_fix.Models
 @using QuanLyKhachSan_fix.Services.Interfaces
-@using QuanLyKhachSan_fix.Services.AppState
+@using QuanLyKhachSan_fix.Services
 @inject IBookingService BookingService
 @inject IPaymentService PaymentService
 @inject CurrentUserState UserState
 
-<div class="payment-page">
-    <h3>Thanh toán</h3>
+<div class="container mt-4" style="max-width: 800px;">
+    <h3 class="mb-4 fw-bold">Thanh toán hóa đơn</h3>
 
-    @if (UserState.CurrentUser == null)
+    @if (booking != null)
     {
-        <p class="error-text">Vui lòng đăng nhập trước. <a href="/">Về trang chủ</a></p>
-    }
-    else if (isLoading)
-    {
-        <p>Đang tải...</p>
-    }
-    else if (booking == null)
-    {
-        <p class="error-text">Không tìm thấy đặt phòng. <a href="/customer/my-bookings">Quay lại</a></p>
-    }
-    else
-    {
-        <p><strong>Mã đặt phòng:</strong> @booking.BookingCode</p>
-        <p><strong>Tổng tiền:</strong> @booking.TotalAmount?.ToString("N0") VND</p>
-        <p><strong>Còn phải thanh toán:</strong> @outstanding.ToString("N0") VND</p>
-
-        @if (outstanding > 0)
-        {
-            <div class="mb-3" style="max-width:300px">
-                <label class="form-label">Hình thức thanh toán</label>
-                <select class="form-select" @bind="paymentMethod">
-                    <option value="online">Thanh toán online</option>
-                    <option value="cash">Tiền mặt tại quầy</option>
-                </select>
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">Mã đặt phòng: <span class="text-primary">@booking.BookingCode</span></h5>
             </div>
+            <div class="card-body p-4">
+                <div class="row text-center mb-4">
+                    <div class="col-md-4 border-end">
+                        <div class="text-muted small">Tổng hóa đơn</div>
+                        <div class="fs-5 fw-bold">@booking.TotalAmount?.ToString("N0") đ</div>
+                    </div>
+                    <div class="col-md-4 border-end">
+                        <div class="text-muted small">Đã thanh toán</div>
+                        <div class="fs-5 fw-bold text-success">@((booking.TotalAmount - outstanding)?.ToString("N0")) đ</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Còn phải trả</div>
+                        <div class="fs-5 fw-bold text-danger">@outstanding.ToString("N0") đ</div>
+                    </div>
+                </div>
 
-            <div class="mb-3" style="max-width:200px">
-                <label class="form-label">Số tiền</label>
-                <input type="number" class="form-control" @bind="amount" />
+                @if (outstanding > 0)
+                {
+                    <div class="bg-light p-3 rounded mb-3">
+                        <div class="row align-items-end g-3">
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold">Hình thức thanh toán</label>
+                                <select class="form-select" @bind="paymentMethod">
+                                    <option value="online">💳 Thanh toán trực tuyến</option>
+                                    <option value="cash">💵 Tiền mặt tại quầy</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Số tiền nhập</label>
+                                <input type="number" class="form-control" @bind="amount" />
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-primary w-100" @onclick="HandlePayClick" disabled="@isSubmitting">
+                                    @(isSubmitting ? "Đang xử lý..." : "Thanh toán")
+                                </button>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="text-danger mt-2 small">@errorMessage</div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-success text-center">
+                        <i class="bi bi-check-circle-fill me-2"></i> Đặt phòng này đã được thanh toán đầy đủ.
+                    </div>
+                }
             </div>
-
-            <button class="btn btn-primary" @onclick="HandlePayClick" disabled="@isSubmitting">
-                @(isSubmitting ? "Đang xử lý..." : "Thanh toán")
-            </button>
-
-            @if (!string.IsNullOrEmpty(errorMessage))
-            {
-                <p class="error-text mt-2">@errorMessage</p>
-            }
-        }
-        else
-        {
-            <p class="text-success">Đặt phòng này đã được thanh toán đầy đủ.</p>
-        }
+        </div>
 
         @if (payments is { Count: > 0 })
         {
