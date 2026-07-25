@@ -3,9 +3,9 @@
 @using QuanLyKhachSan_fix.Models
 @using QuanLyKhachSan_fix.Services.Interfaces
 @using QuanLyKhachSan_fix.Services
-@inject IBookingService BookingService
-@inject IRoomService RoomService
-@inject IBookingEditRequestService EditRequestService
+@inject QuanLyKhachSan_fix.Services.Interfaces.Customer.IBookingService BookingService
+@inject QuanLyKhachSan_fix.Services.Interfaces.Manager.IRoomService RoomService
+@inject QuanLyKhachSan_fix.Services.Interfaces.Customer.IBookingEditRequestService EditRequestService
 @inject CurrentUserState UserState
 @inject NavigationManager NavigationManager
 

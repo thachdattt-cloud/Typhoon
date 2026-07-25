@@ -3,8 +3,8 @@
 @using QuanLyKhachSan_fix.Models
 @using QuanLyKhachSan_fix.Services.Interfaces
 @using QuanLyKhachSan_fix.Services
-@inject IBookingService BookingService
-@inject IPaymentService PaymentService
+@inject QuanLyKhachSan_fix.Services.Interfaces.Customer.IBookingService BookingService
+@inject QuanLyKhachSan_fix.Services.Interfaces.Customer.IPaymentService PaymentService
 @inject CurrentUserState UserState
 
 <div class="container mt-4" style="max-width: 800px;">

@@ -1,5 +1,5 @@
 ﻿@page "/receptionist/check-out"
-@inject ICheckInOutService CheckInOutService
+@inject QuanLyKhachSan_fix.Services.Interfaces.Receptionist.ICheckInOutService CheckInOutService
 @inject QuanLyKhachSan_fix.Services.CurrentUserState CurrentUserState
 
 <h3>Trả phòng</h3>
@@ -67,7 +67,7 @@ else
 
 @code {
     private bool loading = true;
-    private List<BookingDetail> bookingDetails = new();
+    private List<QuanLyKhachSan_fix.Models.BookingDetail> bookingDetails = new();
     private string searchBookingCode = "";
     private string errorMessage = "";
 

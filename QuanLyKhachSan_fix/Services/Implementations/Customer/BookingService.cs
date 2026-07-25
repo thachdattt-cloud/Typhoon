@@ -5,9 +5,10 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using QuanLyKhachSan_fix.Data;
 using QuanLyKhachSan_fix.Models;
-using QuanLyKhachSan_fix.Services.Interfaces;
+using QuanLyKhachSan_fix.Services.Interfaces.Customer;
+using QuanLyKhachSan_fix.Services.Interfaces.Manager;
 
-namespace QuanLyKhachSan_fix.Services.Implementations
+namespace QuanLyKhachSan_fix.Services.Implementations.Customer
 {
     public class BookingService : IBookingService
     {

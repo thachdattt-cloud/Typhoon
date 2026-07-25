@@ -1,18 +1,17 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using QuanLyKhachSan_fix.Data;
 using QuanLyKhachSan_fix.Models;
-using QuanLyKhachSan_fix.Services.Interfaces;
 using QuanLyKhachSan_fix.Services.Security;
 using QuanLyKhachSan_fix.Data;
 using QuanLyKhachSan_fix.Models;
-using QuanLyKhachSan_fix.Services.Interfaces;
 using QuanLyKhachSan_fix.Services.Security;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using QuanLyKhachSan_fix.Services.Interfaces.Manager;
 
-namespace QuanLyKhachSan_fix.Services.Implementations
+namespace QuanLyKhachSan_fix.Services.Implementations.Manager
 {
     public class EmployeeService : IEmployeeService
     {

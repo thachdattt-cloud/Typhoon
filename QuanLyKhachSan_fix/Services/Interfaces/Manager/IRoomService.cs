@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace QuanLyKhachSan_fix.Services.Interfaces
+namespace QuanLyKhachSan_fix.Services.Interfaces.Manager
 {
     public interface IRoomService
     {

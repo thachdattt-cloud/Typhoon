@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using QuanLyKhachSan_fix.Models;
 
-namespace QuanLyKhachSan_fix.Services.Interfaces
+namespace QuanLyKhachSan_fix.Services.Interfaces.Customer
 {
     public class PaymentResult
     {
