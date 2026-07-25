@@ -1,5 +1,86 @@
-﻿<h3>ApproveRequest</h3>
+﻿@page "/receptionist/approve-request"
+@* TODO: khi Thành viên 1 đẩy xong IBookingEditRequestService, thêm dòng dưới đây và bỏ các NotImplementedException *@
+@* @inject IBookingEditRequestService BookingEditRequestService *@
+
+<h3>Duyệt yêu cầu gia hạn / đổi phòng</h3>
+
+<p class="text-muted">
+    Trang này đang chờ Thành viên 1 hoàn thiện <code>IBookingEditRequestService</code>.
+    Giao diện đã sẵn sàng, chỉ cần inject service thật và thay các hàm bên dưới.
+</p>
+
+@if (loading)
+{
+    <p>Đang tải...</p>
+}
+else if (!requests.Any())
+{
+    <p>Không có yêu cầu nào đang chờ duyệt.</p>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Mã yêu cầu</th>
+                <th>Loại yêu cầu</th>
+                <th>Ngày trả phòng mới</th>
+                <th>Phòng mới</th>
+                <th>Phụ phí</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var req in requests)
+            {
+                <tr>
+                    <td>@req.Id</td>
+                    <td>@req.RequestType</td>
+                    <td>@req.NewCheckOutDate?.ToString("dd/MM/yyyy")</td>
+                    <td>@req.NewRoomId</td>
+                    <td>@req.ExtraFee?.ToString("N0") đ</td>
+                    <td>
+                        <button class="btn btn-sm btn-success me-1" @onclick="() => HandleApproveClick(req.Id)">Duyệt</button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => HandleRejectClick(req.Id)">Từ chối</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p class="text-danger mt-2">@errorMessage</p>
+}
 
 @code {
+    private bool loading = true;
+    private List<BookingEditRequest> requests = new();
+    private string errorMessage = "";
 
+    protected override Task OnInitializedAsync()
+    {
+        loading = false;
+        return Task.CompletedTask;
+
+        // TODO: khi có service thật:
+        // requests = await BookingEditRequestService.GetPendingRequestsAsync();
+    }
+
+    private void HandleApproveClick(int requestId)
+    {
+        throw new NotImplementedException("Chờ Thành viên 1 hoàn thiện IBookingEditRequestService.");
+
+        // TODO: khi có service thật:
+        // var result = await BookingEditRequestService.ApproveAsync(requestId, staffId);
+    }
+
+    private void HandleRejectClick(int requestId)
+    {
+        throw new NotImplementedException("Chờ Thành viên 1 hoàn thiện IBookingEditRequestService.");
+
+        // TODO: khi có service thật:
+        // var result = await BookingEditRequestService.RejectAsync(requestId, staffId);
+    }
 }

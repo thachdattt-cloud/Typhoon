@@ -56,7 +56,53 @@
             </NavLink>
         </div>
     }
-</div>
+    @if (CurrentUserState.CurrentUser?.Role == "customer")
+    {
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="customer/dashboard">
+                <span class="bi bi-speedometer2" aria-hidden="true"></span> Khách hàng - Dashboard
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="customer/book-room">
+                <span class="bi bi-calendar-check" aria-hidden="true"></span> Đặt phòng
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="customer/my-bookings">
+                <span class="bi bi-card-list" aria-hidden="true"></span> Lịch sử đặt phòng
+            </NavLink>
+        </div>
+    }
+    @if (CurrentUserState.CurrentUser?.Role == "receptionist")
+    {
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="receptionist/dashboard">
+                <span class="bi bi-speedometer2" aria-hidden="true"></span> Lễ tân - Dashboard
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="receptionist/check-in">
+                <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Nhận phòng
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="receptionist/check-out">
+                <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Trả phòng
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="receptionist/approve-request">
+                <span class="bi bi-check2-square" aria-hidden="true"></span> Duyệt yêu cầu
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="receptionist/invoice">
+                <span class="bi bi-receipt" aria-hidden="true"></span> Xuất hóa đơn
+            </NavLink>
+        </div>
+    }
+    </div>
 @code {
     protected override void OnInitialized()
     {

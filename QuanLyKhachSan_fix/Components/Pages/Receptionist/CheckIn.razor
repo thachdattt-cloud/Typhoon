@@ -1,5 +1,123 @@
-﻿<h3>CheckIn</h3>
+﻿@page "/receptionist/check-in"
+@inject ICheckInOutService CheckInOutService
+
+<h3>Nhận phòng</h3>
+
+<div class="card p-3 mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label">Mã đặt phòng</label>
+            <input class="form-control" placeholder="VD: BK0001" @bind="searchBookingCode" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Mã nhân viên (bạn)</label>
+            <input class="form-control" type="number" @bind="staffId" />
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100" @onclick="HandleSearchClick">Tìm</button>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-outline-secondary w-100" @onclick="HandleShowTodayClick">Khách đến hôm nay</button>
+        </div>
+    </div>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="text-danger mt-2">@errorMessage</p>
+    }
+</div>
+
+@if (loading)
+{
+    <p>Đang tải...</p>
+}
+else if (!bookingDetails.Any())
+{
+    <p>Không có phòng nào đang chờ nhận phòng.</p>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Mã đặt phòng</th>
+                <th>Khách hàng</th>
+                <th>Phòng</th>
+                <th>Loại phòng</th>
+                <th>Nhận phòng</th>
+                <th>Trả phòng</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var bd in bookingDetails)
+            {
+                <tr>
+                    <td>@bd.Booking.BookingCode</td>
+                    <td>@bd.Booking.Customer.FullName</td>
+                    <td>@bd.Room.RoomNumber</td>
+                    <td>@bd.Room.RoomType.Name</td>
+                    <td>@bd.Booking.CheckInDate.ToString("dd/MM/yyyy")</td>
+                    <td>@bd.Booking.CheckOutDate.ToString("dd/MM/yyyy")</td>
+                    <td>
+                        <button class="btn btn-sm btn-success" @onclick="() => HandleCheckInClick(bd.Id)">Nhận phòng</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
 
 @code {
+    private bool loading = true;
+    private List<BookingDetail> bookingDetails = new();
+    private string searchBookingCode = "";
+    private int staffId;
+    private string errorMessage = "";
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTodayArrivalsAsync();
+    }
+
+    private async Task LoadTodayArrivalsAsync()
+    {
+        loading = true;
+        bookingDetails = await CheckInOutService.GetTodayArrivalsAsync();
+        loading = false;
+    }
+
+    private async Task HandleShowTodayClick()
+    {
+        searchBookingCode = "";
+        await LoadTodayArrivalsAsync();
+    }
+
+    private async Task HandleSearchClick()
+    {
+        loading = true;
+        errorMessage = "";
+        bookingDetails = string.IsNullOrWhiteSpace(searchBookingCode)
+            ? await CheckInOutService.GetTodayArrivalsAsync()
+            : await CheckInOutService.SearchReservedByBookingCodeAsync(searchBookingCode);
+        loading = false;
+    }
+
+    private async Task HandleCheckInClick(int bookingDetailId)
+    {
+        errorMessage = "";
+        if (staffId <= 0)
+        {
+            errorMessage = "Vui lòng nhập mã nhân viên của bạn.";
+            return;
+        }
+
+        var result = await CheckInOutService.CheckInAsync(bookingDetailId, staffId);
+        if (!result.Success)
+        {
+            errorMessage = result.ErrorMessage ?? "";
+            return;
+        }
+
+        await HandleSearchClick();
+    }
 }

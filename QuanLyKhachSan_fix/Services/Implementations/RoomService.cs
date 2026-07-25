@@ -2,9 +2,6 @@
 using QuanLyKhachSan_fix.Data;
 using QuanLyKhachSan_fix.Models;
 using QuanLyKhachSan_fix.Services.Interfaces;
-using QuanLyKhachSan_fix.Data;
-using QuanLyKhachSan_fix.Models;
-using QuanLyKhachSan_fix.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +18,7 @@ namespace QuanLyKhachSan_fix.Services.Implementations
             _dbFactory = dbFactory;
         }
 
-        public async Task<List<Room>> SearchAvailableRoomsAsync(DateTime checkIn, DateTime checkOut)
+        public async Task<List<Room>> SearchAvailableRoomsAsync(DateTime checkIn, DateTime checkOut, int? roomTypeId = null, string? roomTypeName = null)
         {
             await using var db = await _dbFactory.CreateDbContextAsync();
 
@@ -31,10 +28,23 @@ namespace QuanLyKhachSan_fix.Services.Implementations
                 .Select(bd => bd.RoomId)
                 .ToListAsync();
 
-            return await db.Rooms
+            var query = db.Rooms
                 .Include(r => r.RoomType)
                 .Where(r => !bookedRoomIds.Contains(r.Id))
-                .Where(r => r.Status != "maintenance")
+                .Where(r => r.Status != "maintenance");
+
+            if (roomTypeId.HasValue)
+            {
+                // filter by RoomTypeId if FK exists
+                query = query.Where(r => EF.Property<int?>(r, "RoomTypeId") == roomTypeId.Value
+                                          || (r.RoomType != null && r.RoomType.Id == roomTypeId.Value));
+            }
+            else if (!string.IsNullOrWhiteSpace(roomTypeName))
+            {
+                query = query.Where(r => r.RoomType != null && r.RoomType.Name == roomTypeName);
+            }
+
+            return await query
                 .OrderBy(r => r.RoomNumber)
                 .ToListAsync();
         }

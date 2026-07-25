@@ -26,7 +26,20 @@
                 <label class="form-label text-muted small mb-1">Số khách</label>
                 <input type="number" min="1" max="20" class="form-control" @bind="guestCount" />
             </div>
-            <div class="col-md-4 mt-auto">
+            <div class="col-md-2">
+                <label class="form-label text-muted small mb-1">Loại phòng</label>
+                <select class="form-select" @bind="selectedRoomTypeId">
+                    <option value="">Tất cả</option>
+                    @if (roomTypes is not null)
+                    {
+                        @foreach (var rt in roomTypes)
+                        {
+                            <option value="@rt.Id">@rt.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 mt-auto">
                 <button class="btn btn-primary w-100" @onclick="HandleSearchClick" disabled="@isSearching">
                     @(isSearching ? "Đang tìm..." : "Tìm phòng ngay")
                 </button>
@@ -76,8 +89,6 @@
     }
 </div>
 
-@* Phần @code giữ nguyên luồng xử lý như source[cite: 6] *@
-
 @code {
     private DateTime checkInDate = DateTime.Today;
     private DateTime checkOutDate = DateTime.Today.AddDays(1);
@@ -85,6 +96,14 @@
     private bool isSearching = false;
     private string? errorMessage;
     private List<Room>? rooms;
+    private List<RoomType>? roomTypes;
+    private int? selectedRoomTypeId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // load room types for filter
+        roomTypes = await RoomService.GetAllRoomTypesAsync();
+    }
 
     private async Task HandleSearchClick()
     {
@@ -99,7 +118,7 @@
 
         isSearching = true;
 
-        var results = await RoomService.SearchAvailableRoomsAsync(checkInDate.Date, checkOutDate.Date);
+        var results = await RoomService.SearchAvailableRoomsAsync(checkInDate.Date, checkOutDate.Date, roomTypeId: selectedRoomTypeId, roomTypeName: null);
 
         rooms = results
             .Where(r => !r.RoomType.MaxCapacity.HasValue || r.RoomType.MaxCapacity.Value >= guestCount)
