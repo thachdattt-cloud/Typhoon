@@ -14,6 +14,7 @@ namespace QuanLyKhachSan_fix.Services.Interfaces
     {
         Task<List<BookingDetail>> GetTodayArrivalsAsync();
         Task<List<BookingDetail>> GetTodayDeparturesAsync();
+        Task<List<BookingDetail>> GetAllCheckedInAsync();
         Task<List<BookingDetail>> SearchReservedByBookingCodeAsync(string bookingCode);
         Task<List<BookingDetail>> SearchCheckedInByBookingCodeAsync(string bookingCode);
         Task<CheckInOutResult> CheckInAsync(int bookingDetailId, int staffId);
