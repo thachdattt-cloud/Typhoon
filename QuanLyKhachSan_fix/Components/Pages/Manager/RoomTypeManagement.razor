@@ -1,5 +1,137 @@
-﻿<h3>RoomTypeManagement</h3>
+﻿@page "/manager/room-types"
+@inject IRoomService RoomService
+
+<h3>Quản lý loại phòng & giá</h3>
+
+<div class="card p-3 mb-3">
+    <h5>@(editingId == null ? "Thêm loại phòng mới" : "Sửa loại phòng")</h5>
+    <div class="row g-2">
+        <div class="col-md-3">
+            <input class="form-control" placeholder="Tên loại phòng" @bind="formName" />
+        </div>
+        <div class="col-md-3">
+            <input class="form-control" placeholder="Mô tả" @bind="formDescription" />
+        </div>
+        <div class="col-md-2">
+            <input class="form-control" type="number" placeholder="Giá" @bind="formBasePrice" />
+        </div>
+        <div class="col-md-2">
+            <input class="form-control" type="number" placeholder="Sức chứa" @bind="formMaxCapacity" />
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100" @onclick="HandleSaveClick">Lưu</button>
+        </div>
+    </div>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="text-danger mt-2">@errorMessage</p>
+    }
+</div>
+
+@if (loading)
+{
+    <p>Đang tải...</p>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Tên</th>
+                <th>Mô tả</th>
+                <th>Giá</th>
+                <th>Sức chứa</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var rt in roomTypes)
+            {
+                <tr>
+                    <td>@rt.Name</td>
+                    <td>@rt.Description</td>
+                    <td>@rt.BasePrice?.ToString("N0")</td>
+                    <td>@rt.MaxCapacity</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => HandleEditClick(rt)">Sửa</button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => HandleDeleteClick(rt.Id)">Xóa</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
 
 @code {
+    private bool loading = true;
+    private List<RoomType> roomTypes = new();
+    private int? editingId = null;
+    private string formName = "";
+    private string formDescription = "";
+    private decimal formBasePrice;
+    private int formMaxCapacity;
+    private string errorMessage = "";
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRoomTypesAsync();
+    }
+
+    private async Task LoadRoomTypesAsync()
+    {
+        loading = true;
+        roomTypes = await RoomService.GetAllRoomTypesAsync();
+        loading = false;
+    }
+
+    private void HandleEditClick(RoomType rt)
+    {
+        editingId = rt.Id;
+        formName = rt.Name;
+        formDescription = rt.Description ?? "";
+        formBasePrice = rt.BasePrice ?? 0;
+        formMaxCapacity = rt.MaxCapacity ?? 0;
+    }
+
+    private async Task HandleSaveClick()
+    {
+        errorMessage = "";
+        if (string.IsNullOrWhiteSpace(formName))
+        {
+            errorMessage = "Vui lòng nhập tên loại phòng.";
+            return;
+        }
+
+        if (editingId == null)
+        {
+            await RoomService.CreateRoomTypeAsync(formName, formDescription, formBasePrice, formMaxCapacity);
+        }
+        else
+        {
+            await RoomService.UpdateRoomTypeAsync(editingId.Value, formName, formDescription, formBasePrice, formMaxCapacity);
+        }
+
+        ResetForm();
+        await LoadRoomTypesAsync();
+    }
+
+    private async Task HandleDeleteClick(int id)
+    {
+        bool deleted = await RoomService.DeleteRoomTypeAsync(id);
+        if (!deleted)
+        {
+            errorMessage = "Không thể xóa — vẫn còn phòng đang thuộc loại này.";
+            return;
+        }
+        await LoadRoomTypesAsync();
+    }
+
+    private void ResetForm()
+    {
+        editingId = null;
+        formName = "";
+        formDescription = "";
+        formBasePrice = 0;
+        formMaxCapacity = 0;
+    }
 }

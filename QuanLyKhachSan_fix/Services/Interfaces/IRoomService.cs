@@ -1,5 +1,4 @@
 ﻿using QuanLyKhachSan_fix.Models;
-using QuanLyKhachSan_fix.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -8,7 +7,7 @@ namespace QuanLyKhachSan_fix.Services.Interfaces
 {
     public interface IRoomService
     {
-        Task<List<Room>> SearchAvailableRoomsAsync(DateTime checkIn, DateTime checkOut);
+        Task<List<Room>> SearchAvailableRoomsAsync(DateTime checkIn, DateTime checkOut, int? roomTypeId = null, string? roomTypeName = null);
         Task<bool> IsRoomAvailableAsync(int roomId, DateTime checkIn, DateTime checkOut);
         Task<List<RoomType>> GetAllRoomTypesAsync();
 

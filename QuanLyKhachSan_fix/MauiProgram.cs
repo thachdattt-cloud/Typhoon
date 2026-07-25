@@ -1,10 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using QuanLyKhachSan_fix.Data;
+using QuanLyKhachSan_fix.Services;
 using QuanLyKhachSan_fix.Services.Implementations;
 using QuanLyKhachSan_fix.Services.Interfaces;
-using QuanLyKhachSan_fix;
-using QuanLyKhachSan_fix.Data;
 
 namespace QuanLyKhachSan_fix
 {
@@ -24,17 +23,24 @@ namespace QuanLyKhachSan_fix
 
             // ---- Thêm phần này ----
 
-            // Connection string tạm hardcode (vi appsettings.json khong tu doc duoc trong MAUI)
-            const string connectionString = "Server=localhost;Database=QuanLyKhachSan;Trusted_Connection=True;TrustServerCertificate=True;";
+            const string connectionString = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=QuanLyKhachSan;Integrated Security=True";
 
-            builder.Services.AddDbContext<AppDbContext>(options =>
+            builder.Services.AddDbContextFactory<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
-            //builder.Services.AddScoped<IAuthService, AuthService>();
-            //builder.Services.AddScoped<IRoomService, RoomService>();
-            // TODO: 3 thanh vien them dong dang ky Service cua minh vao day
-            // builder.Services.AddScoped<IBookingService, BookingService>();      // Thanh vien 1
-            // builder.Services.AddScoped<ICheckInOutService, CheckInOutService>();// Thanh vien 2
-            // builder.Services.AddScoped<IEmployeeService, EmployeeService>();    // Thanh vien 3
+
+            builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IRoomService, RoomService>();
+            builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+            builder.Services.AddScoped<ICustomerAccountService, CustomerAccountService>();
+            builder.Services.AddScoped<IReportService, ReportService>();
+            builder.Services.AddSingleton<QuanLyKhachSan_fix.Services.CurrentUserState>();
+
+            // TODO: 1 thanh vien con lai them dong dang ky Service cua minh vao day
+            builder.Services.AddScoped<IBookingService, BookingService>();       // Thanh vien 1
+            builder.Services.AddScoped<IPaymentService, PaymentService>();       // Thanh vien 1
+            builder.Services.AddScoped<IBookingEditRequestService, BookingEditRequestService>(); // Thanh vien 1
+            builder.Services.AddScoped<ICheckInOutService, CheckInOutService>(); // Thanh vien 2
+            builder.Services.AddScoped<IInvoiceService, InvoiceService>();       // Thanh vien 2
 
             // ---- Hết phần thêm ----
 

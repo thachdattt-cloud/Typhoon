@@ -1,5 +1,130 @@
-﻿<h3>MyBookings</h3>
+﻿@page "/customer/my-bookings"
+@using System.Linq
+@using QuanLyKhachSan_fix.Models
+@using QuanLyKhachSan_fix.Services.Interfaces
+@using QuanLyKhachSan_fix.Services
+@inject IBookingService BookingService
+@inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<div class="my-bookings">
+    <h3>Đặt phòng của tôi</h3>
+
+    @if (UserState.CurrentUser == null)
+    {
+        <p class="error-text">Vui lòng đăng nhập trước. <a href="/">Về trang chủ</a></p>
+    }
+    else
+    {
+        <button class="btn btn-outline-secondary btn-sm mb-3" @onclick="LoadBookingsAsync">Làm mới</button>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p class="error-text">@errorMessage</p>
+        }
+
+        @if (bookings is { Count: > 0 })
+        {
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Mã đặt phòng</th>
+                        <th>Phòng</th>
+                        <th>Nhận phòng</th>
+                        <th>Trả phòng</th>
+                        <th>Trạng thái</th>
+                        <th>Tổng tiền</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var booking in bookings)
+                    {
+                        <tr>
+                            <td>@booking.BookingCode</td>
+                            <td>@string.Join(", ", booking.BookingDetails.Select(d => d.Room.RoomNumber))</td>
+                            <td>@booking.CheckInDate.ToString("dd/MM/yyyy")</td>
+                            <td>@booking.CheckOutDate.ToString("dd/MM/yyyy")</td>
+                            <td>@booking.Status</td>
+                            <td>@booking.TotalAmount?.ToString("N0") VND</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" @onclick="() => HandlePayClick(booking)">Thanh toán</button>
+                                <button class="btn btn-sm btn-warning" @onclick="() => HandleEditRequestClick(booking)">Gia hạn / Đổi phòng</button>
+                                @if (booking.Status == "pending" || booking.Status == "confirmed")
+                                {
+                                    <button class="btn btn-sm btn-danger" @onclick="() => HandleCancelClick(booking)">Hủy</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else if (!isLoading)
+        {
+            <p>Bạn chưa có đặt phòng nào.</p>
+        }
+    }
+</div>
 
 @code {
+    private List<QuanLyKhachSan_fix.Models.Booking>? bookings;
+    private bool isLoading = true;
+    private string? errorMessage;
 
+    protected override async Task OnInitializedAsync()
+    {
+        if (UserState.CurrentUser != null)
+        {
+            await LoadBookingsAsync();
+        }
+        else
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadBookingsAsync()
+    {
+        if (UserState.CurrentUser == null) return;
+
+        errorMessage = null;
+        isLoading = true;
+        bookings = await BookingService.GetBookingsByCustomerAsync(UserState.CurrentUser.Id);
+        isLoading = false;
+    }
+
+    private void HandlePayClick(QuanLyKhachSan_fix.Models.Booking booking)
+    {
+        NavigationManager.NavigateTo($"/customer/payment?bookingId={booking.Id}");
+    }
+
+    private void HandleEditRequestClick(QuanLyKhachSan_fix.Models.Booking booking)
+    {
+        var detail = booking.BookingDetails.FirstOrDefault(d => d.Status != "cancelled" && d.Status != "checked_out");
+        if (detail == null)
+        {
+            errorMessage = "Đặt phòng này không còn phòng nào có thể gia hạn / đổi.";
+            return;
+        }
+
+        NavigationManager.NavigateTo($"/customer/edit-request?bookingId={booking.Id}&bookingDetailId={detail.Id}");
+    }
+
+    private async Task HandleCancelClick(QuanLyKhachSan_fix.Models.Booking booking)
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", $"Bạn chắc chắn muốn hủy đặt phòng {booking.BookingCode}?");
+        if (!confirmed) return;
+
+        var result = await BookingService.CancelBookingAsync(booking.Id, UserState.CurrentUser!.Id, "Khách hàng tự hủy");
+
+        if (!result.Success)
+        {
+            errorMessage = result.ErrorMessage;
+            return;
+        }
+
+        await LoadBookingsAsync();
+    }
 }

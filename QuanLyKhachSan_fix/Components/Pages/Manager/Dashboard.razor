@@ -1,5 +1,57 @@
-﻿<h3>Dashboard</h3>
+﻿@page "/manager/dashboard"
+@inject IReportService ReportService
+@inject IEmployeeService EmployeeService
+
+<h3>Trang chủ Quản lý</h3>
+
+@if (loading)
+{
+    <p>Đang tải...</p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card p-3 mb-3">
+                <span>Doanh thu tháng này</span>
+                <h4>@monthlyRevenue.ToString("N0") đ</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 mb-3">
+                <span>Công suất phòng (30 ngày)</span>
+                <h4>@occupancyRate %</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 mb-3">
+                <span>Tổng nhân viên</span>
+                <h4>@employeeCount</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a href="/manager/room-types" class="btn btn-outline-primary me-2">Loại phòng & giá</a>
+        <a href="/manager/employees" class="btn btn-outline-primary me-2">Quản lý nhân viên</a>
+        <a href="/manager/customers" class="btn btn-outline-primary me-2">Tài khoản khách hàng</a>
+        <a href="/manager/revenue-report" class="btn btn-outline-primary">Báo cáo doanh thu</a>
+    </div>
+}
 
 @code {
+    private bool loading = true;
+    private decimal monthlyRevenue;
+    private double occupancyRate;
+    private int employeeCount;
 
+    protected override async Task OnInitializedAsync()
+    {
+        var now = DateTime.Now;
+        monthlyRevenue = await ReportService.GetMonthlyRevenueAsync(now.Year, now.Month);
+        occupancyRate = await ReportService.GetOccupancyRateAsync(now.AddDays(-30), now);
+        var employees = await EmployeeService.GetAllEmployeesAsync();
+        employeeCount = employees.Count;
+        loading = false;
+    }
 }

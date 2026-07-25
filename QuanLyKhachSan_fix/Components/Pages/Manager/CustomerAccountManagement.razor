@@ -1,5 +1,79 @@
-﻿<h3>CustomerAccountManagement</h3>
+﻿@page "/manager/customers"
+@inject ICustomerAccountService CustomerAccountService
+
+<h3>Quản lý tài khoản khách hàng</h3>
+
+@if (loading)
+{
+    <p>Đang tải...</p>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr><th>Họ tên</th><th>Username</th><th>Email</th><th>Trạng thái</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var customer in customers)
+            {
+                <tr>
+                    <td>@customer.FullName</td>
+                    <td>@customer.Username</td>
+                    <td>@customer.Email</td>
+                    <td>@(customer.IsActive ? "Hoạt động" : "Đã khóa")</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => HandleToggleClick(customer.Id)">
+                            @(customer.IsActive ? "Khóa" : "Mở khóa")
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => HandleViewHistoryClick(customer.Id)">Lịch sử đặt phòng</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (selectedCustomerId != null)
+    {
+        <div class="card p-3 mt-3">
+            <h5>Lịch sử đặt phòng</h5>
+            @if (bookingHistory.Count == 0)
+            {
+                <p>Chưa có đặt phòng nào.</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var b in bookingHistory)
+                    {
+                        <li>@b.BookingCode — @b.CheckInDate.ToShortDateString() đến @b.CheckOutDate.ToShortDateString() — @b.Status</li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+}
 
 @code {
+    private bool loading = true;
+    private List<User> customers = new();
+    private int? selectedCustomerId;
+    private List<Booking> bookingHistory = new();
 
+    protected override async Task OnInitializedAsync()
+    {
+        customers = await CustomerAccountService.GetAllCustomersAsync();
+        loading = false;
+    }
+
+    private async Task HandleToggleClick(int userId)
+    {
+        await CustomerAccountService.ToggleActiveAsync(userId);
+        customers = await CustomerAccountService.GetAllCustomersAsync();
+    }
+
+    private async Task HandleViewHistoryClick(int userId)
+    {
+        selectedCustomerId = userId;
+        bookingHistory = await CustomerAccountService.GetBookingHistoryAsync(userId);
+    }
 }

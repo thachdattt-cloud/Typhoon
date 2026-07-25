@@ -1,5 +1,128 @@
 ﻿@page "/"
+@using QuanLyKhachSan_fix.Services
+@inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
 
-<h1>Hello, world!</h1>
+<div class="landing-page container py-4">
+    <!-- Header / Thanh điều hướng top -->
+    <header class="d-flex justify-content-between align-items-center pb-3 mb-4 border-bottom">
+        <a href="/" class="d-flex align-items-center text-dark text-decoration-none fs-3 fw-bold">
+            🏨 Sun Hotel
+        </a>
 
-Welcome to your new app.
+        <div class="d-flex align-items-center gap-2">
+            @if (UserState.CurrentUser == null)
+            {
+                <a class="btn btn-outline-dark me-2" href="/login">Đăng nhập</a>
+                <a class="btn btn-dark" href="/register">Đăng ký</a>
+            }
+            else
+            {
+                <span class="me-3 text-muted d-none d-md-inline">
+                    Xin chào, <strong class="text-dark">@(UserState.CurrentUser.FullName ?? UserState.CurrentUser.Username)</strong>
+                </span>
+                <a class="btn btn-primary" href="/customer/home">Trang cá nhân</a>
+            }
+        </div>
+    </header>
+
+    <!-- Banner chính & Thanh tìm kiếm nhanh -->
+    <div class="bg-light p-5 rounded-3 shadow-sm mb-5 text-center">
+        <h1 class="display-5 fw-bold mb-3">Tận hưởng kỳ nghỉ hoàn hảo tại Sun Hotel</h1>
+        <p class="lead text-muted mb-4">Đặt phòng nhanh chóng, quản lý tiện lợi và trải nghiệm dịch vụ đẳng cấp.</p>
+
+        <!-- Thanh tìm kiếm nhanh (Đã bỏ ô nhập Địa điểm) -->
+        <div class="card shadow border-0 p-3 mx-auto" style="max-width: 750px;">
+            <div class="row g-2 align-items-end text-start">
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold text-muted mb-1">Ngày nhận phòng</label>
+                    <input type="date" class="form-control" @bind="checkInDate" />
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold text-muted mb-1">Ngày trả phòng</label>
+                    <input type="date" class="form-control" @bind="checkOutDate" />
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-dark w-100 py-2 fw-bold" @onclick="HandleSearchClick">
+                        🔍 Tìm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2 Luồng chức năng chính chính -->
+    <h5 class="fw-bold mb-3">Dịch vụ chính</h5>
+    <div class="row g-4">
+        <!-- Chức năng 1: Tìm & Đặt phòng -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100 p-2 home-card" style="cursor: pointer;" @onclick="HandleRoomSearchClick">
+                <div class="card-body d-flex align-items-center">
+                    <div class="fs-1 me-3 text-primary">🔍</div>
+                    <div>
+                        <h5 class="card-title fw-bold mb-1">Tra cứu & Đặt phòng</h5>
+                        <p class="card-text text-muted mb-0">
+                            Xem danh sách phòng trống, kiểm tra giá và chọn phòng phù hợp mà không bắt buộc đăng nhập trước.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chức năng 2: Quản lý Đặt phòng -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100 p-2 home-card" style="cursor: pointer;" @onclick="HandleMyBookingsClick">
+                <div class="card-body d-flex align-items-center">
+                    <div class="fs-1 me-3 text-success">📖</div>
+                    <div>
+                        <h5 class="card-title fw-bold mb-1">Đặt phòng của tôi</h5>
+                        <p class="card-text text-muted mb-0">
+                            @(UserState.CurrentUser == null
+                                ? "Đăng nhập để xem lịch sử, thanh toán, gửi yêu cầu gia hạn hoặc đổi phòng."
+                                : "Xem danh sách phòng đã đặt, thanh toán online, gia hạn hoặc gửi yêu cầu đổi phòng.")
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .home-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+        .home-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 0.5rem 1.2rem rgba(0, 0, 0, 0.12) !important;
+        }
+</style>
+
+@code {
+    private DateTime checkInDate = DateTime.Today;
+    private DateTime checkOutDate = DateTime.Today.AddDays(1);
+
+    private void HandleSearchClick()
+    {
+        string checkIn = checkInDate.ToString("yyyy-MM-dd");
+        string checkOut = checkOutDate.ToString("yyyy-MM-dd");
+        NavigationManager.NavigateTo($"/customer/room-search?checkIn={checkIn}&checkOut={checkOut}");
+    }
+
+    private void HandleRoomSearchClick()
+    {
+        NavigationManager.NavigateTo("/customer/room-search");
+    }
+
+    private void HandleMyBookingsClick()
+    {
+        if (UserState.CurrentUser == null)
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+
+        NavigationManager.NavigateTo("/customer/my-bookings");
+    }
+}

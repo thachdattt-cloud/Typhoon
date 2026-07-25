@@ -1,5 +1,137 @@
-﻿<h3>Booking</h3>
+﻿@page "/customer/booking"
+@using System.Linq
+@using QuanLyKhachSan_fix.Models
+@using QuanLyKhachSan_fix.Services.Interfaces
+@using QuanLyKhachSan_fix.Services
+@inject IRoomService RoomService
+@inject IBookingService BookingService
+@inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
+
+<div class="container mt-4">
+    <h3 class="mb-4 fw-bold">Xác nhận đặt phòng</h3>
+
+    @if (UserState.CurrentUser == null)
+    {
+        <div class="alert alert-danger">Vui lòng đăng nhập trước khi đặt phòng. <a href="/login">Đăng nhập</a></div>
+    }
+    else if (isLoading)
+    {
+        <div class="d-flex justify-content-center"><div class="spinner-border text-primary"></div></div>
+    }
+    else if (room != null)
+    {
+        <div class="row g-4">
+            <!-- Cột trái: Thông tin -->
+            <div class="col-md-8">
+                <div class="card shadow-sm border-0 p-4 h-100">
+                    <h5 class="text-primary mb-3">Thông tin nhận phòng</h5>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 text-muted">Phòng đã chọn:</div>
+                        <div class="col-sm-8 fw-bold">@room.RoomNumber - @room.RoomType.Name</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-4 text-muted">Thời gian:</div>
+                        <div class="col-sm-8">
+                            @checkInDate.ToString("dd/MM/yyyy") <i class="bi bi-arrow-right mx-2"></i> @checkOutDate.ToString("dd/MM/yyyy")
+                            <span class="badge bg-info ms-2">@nights đêm</span>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-sm-4 text-muted mt-2">Số khách thực tế:</div>
+                        <div class="col-sm-4">
+                            <input type="number" min="1" max="@(room.RoomType.MaxCapacity ?? 20)" class="form-control" @bind="guestCount" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cột phải: Thanh toán & Xác nhận -->
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 p-4 h-100 bg-light">
+                    <h5 class="mb-4">Tóm tắt chi phí</h5>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Giá mỗi đêm:</span>
+                        <span>@room.RoomType.BasePrice?.ToString("N0") đ</span>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between mb-4">
+                        <strong class="fs-5">Tổng tiền:</strong>
+                        <strong class="fs-5 text-danger">@totalAmount.ToString("N0") đ</strong>
+                    </div>
+
+                    <button class="btn btn-primary btn-lg w-100" @onclick="HandleConfirmClick" disabled="@isSubmitting">
+                        @(isSubmitting ? "Đang xử lý..." : "Xác nhận đặt phòng")
+                    </button>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger mt-3 py-2">@errorMessage</div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
+    [SupplyParameterFromQuery] public int RoomId { get; set; }
+    [SupplyParameterFromQuery] public string? CheckIn { get; set; }
+    [SupplyParameterFromQuery] public string? CheckOut { get; set; }
+    [SupplyParameterFromQuery] public int GuestCount { get; set; } = 1;
 
+    private DateTime checkInDate;
+    private DateTime checkOutDate;
+    private int nights;
+    private int guestCount;
+    private decimal totalAmount;
+    private Room? room;
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (UserState.CurrentUser == null)
+        {
+            isLoading = false;
+            return;
+        }
+
+        checkInDate = DateTime.TryParse(CheckIn, out var ci) ? ci.Date : DateTime.Today;
+        checkOutDate = DateTime.TryParse(CheckOut, out var co) ? co.Date : DateTime.Today.AddDays(1);
+        nights = Math.Max(1, (checkOutDate - checkInDate).Days);
+        guestCount = GuestCount < 1 ? 1 : GuestCount;
+
+        var availableRooms = await RoomService.SearchAvailableRoomsAsync(checkInDate, checkOutDate);
+        room = availableRooms.FirstOrDefault(r => r.Id == RoomId);
+
+        if (room != null)
+        {
+            totalAmount = (room.RoomType.BasePrice ?? 0) * nights;
+        }
+
+        isLoading = false;
+    }
+
+    private async Task HandleConfirmClick()
+    {
+        if (room == null || UserState.CurrentUser == null) return;
+
+        errorMessage = null;
+        isSubmitting = true;
+
+        var result = await BookingService.CreateBookingAsync(
+            UserState.CurrentUser.Id, room.Id, checkInDate, checkOutDate, guestCount);
+
+        isSubmitting = false;
+
+        if (!result.Success)
+        {
+            errorMessage = result.ErrorMessage;
+            return;
+        }
+
+        NavigationManager.NavigateTo($"/customer/payment?bookingId={result.Booking!.Id}");
+    }
 }

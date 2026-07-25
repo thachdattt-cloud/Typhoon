@@ -1,5 +1,141 @@
-﻿<h3>RoomSearch</h3>
+﻿@page "/customer/room-search"
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading.Tasks
+@using QuanLyKhachSan_fix.Models
+@using QuanLyKhachSan_fix.Services.Interfaces
+@inject IRoomService RoomService
+@inject NavigationManager NavigationManager
+
+
+<div class="container mt-4">
+    <h3 class="mb-4 fw-bold">🔍 Tìm phòng trống</h3>
+
+    <!-- Khung tìm kiếm -->
+    <div class="card shadow-sm border-0 mb-4 p-3 bg-light">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+                <label class="form-label text-muted small mb-1">Ngày nhận phòng</label>
+                <input type="date" class="form-control" @bind="checkInDate" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small mb-1">Ngày trả phòng</label>
+                <input type="date" class="form-control" @bind="checkOutDate" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small mb-1">Số khách</label>
+                <input type="number" min="1" max="20" class="form-control" @bind="guestCount" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small mb-1">Loại phòng</label>
+                <select class="form-select" @bind="selectedRoomTypeId">
+                    <option value="">Tất cả</option>
+                    @if (roomTypes is not null)
+                    {
+                        @foreach (var rt in roomTypes)
+                        {
+                            <option value="@rt.Id">@rt.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 mt-auto">
+                <button class="btn btn-primary w-100" @onclick="HandleSearchClick" disabled="@isSearching">
+                    @(isSearching ? "Đang tìm..." : "Tìm phòng ngay")
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-warning">@errorMessage</div>
+    }
+
+    <!-- Kết quả tìm kiếm -->
+    @if (rooms is { Count: > 0 })
+    {
+        <div class="table-responsive shadow-sm rounded">
+            <table class="table table-hover align-middle mb-0 bg-white">
+                <thead class="table-light">
+                    <tr>
+                        <th>Phòng</th>
+                        <th>Loại phòng</th>
+                        <th>Tầng</th>
+                        <th>Sức chứa</th>
+                        <th>Giá / đêm</th>
+                        <th class="text-end">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var room in rooms)
+                    {
+                        <tr>
+                            <td><span class="badge bg-secondary">@room.RoomNumber</span></td>
+                            <td class="fw-bold text-primary">@room.RoomType.Name</td>
+                            <td>Tầng @room.Floor</td>
+                            <td>@room.RoomType.MaxCapacity khách</td>
+                            <td class="text-danger fw-bold">@(room.RoomType.BasePrice?.ToString("N0")) đ</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-success px-3" @onclick="() => HandleSelectRoomClick(room)">
+                                    Chọn phòng
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
 
 @code {
+    private DateTime checkInDate = DateTime.Today;
+    private DateTime checkOutDate = DateTime.Today.AddDays(1);
+    private int guestCount = 1;
+    private bool isSearching = false;
+    private string? errorMessage;
+    private List<Room>? rooms;
+    private List<RoomType>? roomTypes;
+    private int? selectedRoomTypeId;
 
+    protected override async Task OnInitializedAsync()
+    {
+        // load room types for filter
+        roomTypes = await RoomService.GetAllRoomTypesAsync();
+    }
+
+    private async Task HandleSearchClick()
+    {
+        errorMessage = null;
+        rooms = null;
+
+        if (checkOutDate.Date <= checkInDate.Date)
+        {
+            errorMessage = "Ngày trả phòng phải sau ngày nhận phòng.";
+            return;
+        }
+
+        isSearching = true;
+
+        var results = await RoomService.SearchAvailableRoomsAsync(checkInDate.Date, checkOutDate.Date, roomTypeId: selectedRoomTypeId, roomTypeName: null);
+
+        rooms = results
+            .Where(r => !r.RoomType.MaxCapacity.HasValue || r.RoomType.MaxCapacity.Value >= guestCount)
+            .ToList();
+
+        isSearching = false;
+
+        if (rooms.Count == 0)
+        {
+            errorMessage = "Không có phòng trống phù hợp trong khoảng thời gian đã chọn.";
+        }
+    }
+
+    private void HandleSelectRoomClick(Room room)
+    {
+        string checkIn = checkInDate.ToString("yyyy-MM-dd");
+        string checkOut = checkOutDate.ToString("yyyy-MM-dd");
+        NavigationManager.NavigateTo($"/customer/booking?roomId={room.Id}&checkIn={checkIn}&checkOut={checkOut}&guestCount={guestCount}");
+    }
 }

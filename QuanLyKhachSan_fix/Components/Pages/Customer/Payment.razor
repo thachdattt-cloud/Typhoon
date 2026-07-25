@@ -1,5 +1,159 @@
-﻿<h3>Payment</h3>
+﻿@page "/customer/payment"
+@using System.Linq
+@using QuanLyKhachSan_fix.Models
+@using QuanLyKhachSan_fix.Services.Interfaces
+@using QuanLyKhachSan_fix.Services
+@inject IBookingService BookingService
+@inject IPaymentService PaymentService
+@inject CurrentUserState UserState
+
+<div class="container mt-4" style="max-width: 800px;">
+    <h3 class="mb-4 fw-bold">Thanh toán hóa đơn</h3>
+
+    @if (booking != null)
+    {
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">Mã đặt phòng: <span class="text-primary">@booking.BookingCode</span></h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row text-center mb-4">
+                    <div class="col-md-4 border-end">
+                        <div class="text-muted small">Tổng hóa đơn</div>
+                        <div class="fs-5 fw-bold">@booking.TotalAmount?.ToString("N0") đ</div>
+                    </div>
+                    <div class="col-md-4 border-end">
+                        <div class="text-muted small">Đã thanh toán</div>
+                        <div class="fs-5 fw-bold text-success">@((booking.TotalAmount - outstanding)?.ToString("N0")) đ</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Còn phải trả</div>
+                        <div class="fs-5 fw-bold text-danger">@outstanding.ToString("N0") đ</div>
+                    </div>
+                </div>
+
+                @if (outstanding > 0)
+                {
+                    <div class="bg-light p-3 rounded mb-3">
+                        <div class="row align-items-end g-3">
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold">Hình thức thanh toán</label>
+                                <select class="form-select" @bind="paymentMethod">
+                                    <option value="online">💳 Thanh toán trực tuyến</option>
+                                    <option value="cash">💵 Tiền mặt tại quầy</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Số tiền nhập</label>
+                                <input type="number" class="form-control" @bind="amount" />
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-primary w-100" @onclick="HandlePayClick" disabled="@isSubmitting">
+                                    @(isSubmitting ? "Đang xử lý..." : "Thanh toán")
+                                </button>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="text-danger mt-2 small">@errorMessage</div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-success text-center">
+                        <i class="bi bi-check-circle-fill me-2"></i> Đặt phòng này đã được thanh toán đầy đủ.
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (payments is { Count: > 0 })
+        {
+            <h5 class="mt-4">Lịch sử thanh toán</h5>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Ngày</th>
+                        <th>Số tiền</th>
+                        <th>Hình thức</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in payments)
+                    {
+                        <tr>
+                            <td>@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@p.Amount.ToString("N0") VND</td>
+                            <td>@(p.PaymentMethod == "online" ? "Online" : "Tiền mặt")</td>
+                            <td>@p.PaymentStatus</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+</div>
 
 @code {
+    [SupplyParameterFromQuery] public int BookingId { get; set; }
 
+    private QuanLyKhachSan_fix.Models.Booking? booking;
+    private List<QuanLyKhachSan_fix.Models.Payment>? payments;
+    private decimal outstanding;
+    private decimal amount;
+    private string paymentMethod = "online";
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (UserState.CurrentUser == null)
+        {
+            isLoading = false;
+            return;
+        }
+
+        await LoadAsync();
+        isLoading = false;
+    }
+
+    private async Task LoadAsync()
+    {
+        booking = await BookingService.GetBookingByIdAsync(BookingId);
+        if (booking == null) return;
+
+        payments = await PaymentService.GetPaymentsByBookingAsync(BookingId);
+        decimal paid = payments.Where(p => p.PaymentStatus == "success").Sum(p => p.Amount);
+        outstanding = (booking.TotalAmount ?? 0) - paid;
+        if (outstanding < 0) outstanding = 0;
+        amount = outstanding;
+    }
+
+    private async Task HandlePayClick()
+    {
+        errorMessage = null;
+
+        if (amount <= 0 || amount > outstanding)
+        {
+            errorMessage = "Số tiền thanh toán không hợp lệ.";
+            return;
+        }
+
+        isSubmitting = true;
+
+        var result = await PaymentService.CreatePaymentAsync(BookingId, amount, paymentMethod);
+
+        isSubmitting = false;
+
+        if (!result.Success)
+        {
+            errorMessage = result.ErrorMessage;
+            return;
+        }
+
+        await LoadAsync();
+    }
 }

@@ -1,5 +1,48 @@
-﻿<h3>Dashboard</h3>
+﻿@page "/receptionist/dashboard"
+@inject ICheckInOutService CheckInOutService
+
+<h3>Trang chủ Lễ tân</h3>
+
+@if (loading)
+{
+    <p>Đang tải...</p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card p-3 mb-3">
+                <span>Khách nhận phòng hôm nay</span>
+                <h4>@arrivalsCount</h4>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card p-3 mb-3">
+                <span>Khách trả phòng hôm nay</span>
+                <h4>@departuresCount</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a href="/receptionist/check-in" class="btn btn-outline-primary me-2">Nhận phòng</a>
+        <a href="/receptionist/check-out" class="btn btn-outline-primary me-2">Trả phòng</a>
+        <a href="/receptionist/approve-request" class="btn btn-outline-primary me-2">Duyệt yêu cầu</a>
+        <a href="/receptionist/invoice" class="btn btn-outline-primary">Xuất hóa đơn</a>
+    </div>
+}
 
 @code {
+    private bool loading = true;
+    private int arrivalsCount;
+    private int departuresCount;
 
+    protected override async Task OnInitializedAsync()
+    {
+        var arrivals = await CheckInOutService.GetTodayArrivalsAsync();
+        var departures = await CheckInOutService.GetTodayDeparturesAsync();
+        arrivalsCount = arrivals.Count;
+        departuresCount = departures.Count;
+        loading = false;
+    }
 }

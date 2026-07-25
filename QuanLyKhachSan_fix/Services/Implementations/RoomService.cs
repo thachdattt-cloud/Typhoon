@@ -2,8 +2,6 @@
 using QuanLyKhachSan_fix.Data;
 using QuanLyKhachSan_fix.Models;
 using QuanLyKhachSan_fix.Services.Interfaces;
-using QuanLyKhachSan_fix.Data;
-using QuanLyKhachSan_fix.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,32 +11,49 @@ namespace QuanLyKhachSan_fix.Services.Implementations
 {
     public class RoomService : IRoomService
     {
-        private readonly AppDbContext _db;
+        private readonly IDbContextFactory<AppDbContext> _dbFactory;
 
-        public RoomService(AppDbContext db)
+        public RoomService(IDbContextFactory<AppDbContext> dbFactory)
         {
-            _db = db;
+            _dbFactory = dbFactory;
         }
 
-        public async Task<List<Room>> SearchAvailableRoomsAsync(DateTime checkIn, DateTime checkOut)
+        public async Task<List<Room>> SearchAvailableRoomsAsync(DateTime checkIn, DateTime checkOut, int? roomTypeId = null, string? roomTypeName = null)
         {
-            var bookedRoomIds = await _db.BookingDetails
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var bookedRoomIds = await db.BookingDetails
                 .Where(bd => bd.Status != "cancelled" && bd.Status != "checked_out")
                 .Where(bd => bd.Booking.CheckInDate < checkOut && bd.Booking.CheckOutDate > checkIn)
                 .Select(bd => bd.RoomId)
                 .ToListAsync();
 
-            return await _db.Rooms
+            var query = db.Rooms
                 .Include(r => r.RoomType)
                 .Where(r => !bookedRoomIds.Contains(r.Id))
-                .Where(r => r.Status != "maintenance")
+                .Where(r => r.Status != "maintenance");
+
+            if (roomTypeId.HasValue)
+            {
+                // filter by RoomTypeId if FK exists
+                query = query.Where(r => EF.Property<int?>(r, "RoomTypeId") == roomTypeId.Value
+                                          || (r.RoomType != null && r.RoomType.Id == roomTypeId.Value));
+            }
+            else if (!string.IsNullOrWhiteSpace(roomTypeName))
+            {
+                query = query.Where(r => r.RoomType != null && r.RoomType.Name == roomTypeName);
+            }
+
+            return await query
                 .OrderBy(r => r.RoomNumber)
                 .ToListAsync();
         }
 
         public async Task<bool> IsRoomAvailableAsync(int roomId, DateTime checkIn, DateTime checkOut)
         {
-            bool hasConflict = await _db.BookingDetails
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            bool hasConflict = await db.BookingDetails
                 .Where(bd => bd.RoomId == roomId)
                 .Where(bd => bd.Status != "cancelled" && bd.Status != "checked_out")
                 .Where(bd => bd.Booking.CheckInDate < checkOut && bd.Booking.CheckOutDate > checkIn)
@@ -49,11 +64,14 @@ namespace QuanLyKhachSan_fix.Services.Implementations
 
         public async Task<List<RoomType>> GetAllRoomTypesAsync()
         {
-            return await _db.RoomTypes.OrderBy(rt => rt.BasePrice).ToListAsync();
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            return await db.RoomTypes.OrderBy(rt => rt.BasePrice).ToListAsync();
         }
 
         public async Task<RoomType> CreateRoomTypeAsync(string name, string? description, decimal basePrice, int maxCapacity)
         {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
             var roomType = new RoomType
             {
                 Name = name,
@@ -63,14 +81,16 @@ namespace QuanLyKhachSan_fix.Services.Implementations
                 CreatedAt = DateTime.Now
             };
 
-            _db.RoomTypes.Add(roomType);
-            await _db.SaveChangesAsync();
+            db.RoomTypes.Add(roomType);
+            await db.SaveChangesAsync();
             return roomType;
         }
 
         public async Task<bool> UpdateRoomTypeAsync(int roomTypeId, string name, string? description, decimal basePrice, int maxCapacity)
         {
-            var roomType = await _db.RoomTypes.FindAsync(roomTypeId);
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var roomType = await db.RoomTypes.FindAsync(roomTypeId);
             if (roomType == null) return false;
 
             roomType.Name = name;
@@ -78,20 +98,22 @@ namespace QuanLyKhachSan_fix.Services.Implementations
             roomType.BasePrice = basePrice;
             roomType.MaxCapacity = maxCapacity;
 
-            await _db.SaveChangesAsync();
+            await db.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> DeleteRoomTypeAsync(int roomTypeId)
         {
-            var roomType = await _db.RoomTypes.FindAsync(roomTypeId);
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var roomType = await db.RoomTypes.FindAsync(roomTypeId);
             if (roomType == null) return false;
 
-            bool hasRooms = await _db.Rooms.AnyAsync(r => r.RoomTypeId == roomTypeId);
+            bool hasRooms = await db.Rooms.AnyAsync(r => r.RoomTypeId == roomTypeId);
             if (hasRooms) return false;
 
-            _db.RoomTypes.Remove(roomType);
-            await _db.SaveChangesAsync();
+            db.RoomTypes.Remove(roomType);
+            await db.SaveChangesAsync();
             return true;
         }
     }
