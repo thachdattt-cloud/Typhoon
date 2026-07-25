@@ -33,13 +33,14 @@ namespace QuanLyKhachSan_fix
             builder.Services.AddScoped<IEmployeeService, EmployeeService>();
             builder.Services.AddScoped<ICustomerAccountService, CustomerAccountService>();
             builder.Services.AddScoped<IReportService, ReportService>();
-            builder.Services.AddScoped<CurrentUserState>();
-            // TODO: 2 thanh vien con lai them dong dang ky Service cua minh vao day
+            builder.Services.AddSingleton<QuanLyKhachSan_fix.Services.CurrentUserState>();
+
+            // TODO: 1 thanh vien con lai them dong dang ky Service cua minh vao day
             builder.Services.AddScoped<IBookingService, BookingService>();       // Thanh vien 1
             builder.Services.AddScoped<IPaymentService, PaymentService>();       // Thanh vien 1
             builder.Services.AddScoped<IBookingEditRequestService, BookingEditRequestService>(); // Thanh vien 1
-             builder.Services.AddScoped<ICheckInOutService, CheckInOutService>(); // Thanh vien 2
-             builder.Services.AddScoped<IInvoiceService, InvoiceService>();       // Thanh vien 2
+            builder.Services.AddScoped<ICheckInOutService, CheckInOutService>(); // Thanh vien 2
+            builder.Services.AddScoped<IInvoiceService, InvoiceService>();       // Thanh vien 2
 
             // ---- Hết phần thêm ----
 

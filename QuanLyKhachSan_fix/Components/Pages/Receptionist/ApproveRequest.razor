@@ -1,13 +1,16 @@
 ﻿@page "/receptionist/approve-request"
-@* TODO: khi Thành viên 1 đẩy xong IBookingEditRequestService, thêm dòng dưới đây và bỏ các NotImplementedException *@
-@* @inject IBookingEditRequestService BookingEditRequestService *@
+@inject IBookingEditRequestService BookingEditRequestService
+@inject QuanLyKhachSan_fix.Services.CurrentUserState CurrentUserState
 
 <h3>Duyệt yêu cầu gia hạn / đổi phòng</h3>
 
-<p class="text-muted">
-    Trang này đang chờ Thành viên 1 hoàn thiện <code>IBookingEditRequestService</code>.
-    Giao diện đã sẵn sàng, chỉ cần inject service thật và thay các hàm bên dưới.
-</p>
+<div class="card p-3 mb-3">
+    <p class="text-muted mb-0">Nhân viên thực hiện: @(CurrentUserState.CurrentUser?.FullName ?? "Chưa đăng nhập")</p>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="text-danger mt-2 mb-0">@errorMessage</p>
+    }
+</div>
 
 @if (loading)
 {
@@ -19,15 +22,16 @@ else if (!requests.Any())
 }
 else
 {
-    <table class="table table-bordered">
+    <table class="table table-bordered align-middle">
         <thead>
             <tr>
                 <th>Mã yêu cầu</th>
+                <th>Mã đặt phòng</th>
                 <th>Loại yêu cầu</th>
-                <th>Ngày trả phòng mới</th>
-                <th>Phòng mới</th>
+                <th>Chi tiết thay đổi</th>
                 <th>Phụ phí</th>
-                <th></th>
+                <th>Ngày gửi</th>
+                <th style="min-width:260px">Xử lý</th>
             </tr>
         </thead>
         <tbody>
@@ -35,12 +39,23 @@ else
             {
                 <tr>
                     <td>@req.Id</td>
-                    <td>@req.RequestType</td>
-                    <td>@req.NewCheckOutDate?.ToString("dd/MM/yyyy")</td>
-                    <td>@req.NewRoomId</td>
-                    <td>@req.ExtraFee?.ToString("N0") đ</td>
+                    <td>@req.BookingDetail.Booking.BookingCode</td>
+                    <td>@(req.RequestType == "extend" ? "Gia hạn ngày trả phòng" : "Đổi phòng")</td>
+                    <td>
+                        @if (req.RequestType == "extend")
+                        {
+                            <span>Trả phòng mới: @req.NewCheckOutDate?.ToString("dd/MM/yyyy")</span>
+                        }
+                        else
+                        {
+                            <span>@(req.OldRoom?.RoomNumber ?? "?") → @(req.NewRoom?.RoomNumber ?? "?")</span>
+                        }
+                    </td>
+                    <td>@(req.ExtraFee.HasValue ? req.ExtraFee.Value.ToString("N0") + " đ" : "-")</td>
+                    <td>@req.RequestedAt.ToString("dd/MM/yyyy HH:mm")</td>
                     <td>
                         <button class="btn btn-sm btn-success me-1" @onclick="() => HandleApproveClick(req.Id)">Duyệt</button>
+                        <input class="form-control form-control-sm d-inline-block me-1" style="width:160px" placeholder="Lý do từ chối" @bind="rejectReasons[req.Id]" />
                         <button class="btn btn-sm btn-outline-danger" @onclick="() => HandleRejectClick(req.Id)">Từ chối</button>
                     </td>
                 </tr>
@@ -49,38 +64,63 @@ else
     </table>
 }
 
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-    <p class="text-danger mt-2">@errorMessage</p>
-}
-
 @code {
     private bool loading = true;
     private List<BookingEditRequest> requests = new();
+    private Dictionary<int, string> rejectReasons = new();
     private string errorMessage = "";
 
-    protected override Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        loading = true;
+        requests = await BookingEditRequestService.GetPendingRequestsAsync();
+        rejectReasons = requests.ToDictionary(r => r.Id, r => "");
         loading = false;
-        return Task.CompletedTask;
-
-        // TODO: khi có service thật:
-        // requests = await BookingEditRequestService.GetPendingRequestsAsync();
     }
 
-    private void HandleApproveClick(int requestId)
+    private async Task HandleApproveClick(int requestId)
     {
-        throw new NotImplementedException("Chờ Thành viên 1 hoàn thiện IBookingEditRequestService.");
+        errorMessage = "";
+        var staffId = CurrentUserState.CurrentUser?.Id;
+        if (staffId == null || staffId <= 0)
+        {
+            errorMessage = "Bạn cần đăng nhập trước khi thực hiện thao tác này.";
+            return;
+        }
 
-        // TODO: khi có service thật:
-        // var result = await BookingEditRequestService.ApproveAsync(requestId, staffId);
+        var result = await BookingEditRequestService.ApproveRequestAsync(requestId, staffId.Value);
+        if (!result.Success)
+        {
+            errorMessage = result.ErrorMessage ?? "";
+            return;
+        }
+
+        await LoadDataAsync();
     }
 
-    private void HandleRejectClick(int requestId)
+    private async Task HandleRejectClick(int requestId)
     {
-        throw new NotImplementedException("Chờ Thành viên 1 hoàn thiện IBookingEditRequestService.");
+        errorMessage = "";
+        var staffId = CurrentUserState.CurrentUser?.Id;
+        if (staffId == null || staffId <= 0)
+        {
+            errorMessage = "Bạn cần đăng nhập trước khi thực hiện thao tác này.";
+            return;
+        }
 
-        // TODO: khi có service thật:
-        // var result = await BookingEditRequestService.RejectAsync(requestId, staffId);
+        rejectReasons.TryGetValue(requestId, out var reason);
+        var result = await BookingEditRequestService.RejectRequestAsync(requestId, staffId.Value, reason);
+        if (!result.Success)
+        {
+            errorMessage = result.ErrorMessage ?? "";
+            return;
+        }
+
+        await LoadDataAsync();
     }
 }
