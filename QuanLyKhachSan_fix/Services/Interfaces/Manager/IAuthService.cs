@@ -1,8 +1,7 @@
 ﻿using QuanLyKhachSan_fix.Models;
-using QuanLyKhachSan_fix.Models;
 using System.Threading.Tasks;
 
-namespace QuanLyKhachSan_fix.Services.Interfaces
+namespace QuanLyKhachSan_fix.Services.Interfaces.Manager
 {
     public class AuthResult
     {

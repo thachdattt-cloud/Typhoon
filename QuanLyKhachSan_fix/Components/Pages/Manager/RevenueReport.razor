@@ -4,7 +4,7 @@
 
 }
 @page "/manager/revenue-report"
-@inject IReportService ReportService
+@inject QuanLyKhachSan_fix.Services.Interfaces.Manager.IReportService ReportService
 
 <h3>Báo cáo doanh thu & công suất phòng</h3>
 
@@ -61,7 +61,7 @@
 
     private decimal totalRevenue;
     private double occupancyRate;
-    private List<RevenueByRoomType> revenueByRoomType = new();
+    private List<QuanLyKhachSan_fix.Services.Interfaces.Manager.RevenueByRoomType> revenueByRoomType = new();
 
     private async Task HandleGenerateClick()
     {

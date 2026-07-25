@@ -2,8 +2,12 @@
 using Microsoft.Extensions.Logging;
 using QuanLyKhachSan_fix.Data;
 using QuanLyKhachSan_fix.Services;
-using QuanLyKhachSan_fix.Services.Implementations;
-using QuanLyKhachSan_fix.Services.Interfaces;
+using QuanLyKhachSan_fix.Services.Implementations.Customer;
+using QuanLyKhachSan_fix.Services.Implementations.Manager;
+using QuanLyKhachSan_fix.Services.Implementations.Receptionist;
+using QuanLyKhachSan_fix.Services.Interfaces.Customer;
+using QuanLyKhachSan_fix.Services.Interfaces.Manager;
+using QuanLyKhachSan_fix.Services.Interfaces.Receptionist;
 
 namespace QuanLyKhachSan_fix
 {

@@ -1,5 +1,5 @@
 ﻿@page "/receptionist/check-out"
-@inject ICheckInOutService CheckInOutService
+@inject QuanLyKhachSan_fix.Services.Interfaces.Receptionist.ICheckInOutService CheckInOutService
 @inject QuanLyKhachSan_fix.Services.CurrentUserState CurrentUserState
 
 <h3>Trả phòng</h3>
@@ -14,7 +14,7 @@
             <button class="btn btn-primary w-100" @onclick="HandleSearchClick">Tìm</button>
         </div>
         <div class="col-md-4">
-            <button class="btn btn-outline-secondary w-100" @onclick="HandleShowTodayClick">Khách trả hôm nay</button>
+            <button class="btn btn-outline-secondary w-100" @onclick="HandleShowAllClick">Tất cả phòng có thể trả</button>
         </div>
     </div>
     <p class="text-muted mt-2 mb-0">Nhân viên thực hiện: @(CurrentUserState.CurrentUser?.FullName ?? "Chưa đăng nhập")</p>
@@ -67,26 +67,26 @@ else
 
 @code {
     private bool loading = true;
-    private List<BookingDetail> bookingDetails = new();
+    private List<QuanLyKhachSan_fix.Models.BookingDetail> bookingDetails = new();
     private string searchBookingCode = "";
     private string errorMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadTodayDeparturesAsync();
+        await LoadAllCheckedInAsync();
     }
 
-    private async Task LoadTodayDeparturesAsync()
+    private async Task LoadAllCheckedInAsync()
     {
         loading = true;
-        bookingDetails = await CheckInOutService.GetTodayDeparturesAsync();
+        bookingDetails = await CheckInOutService.GetAllCheckedInAsync();
         loading = false;
     }
 
-    private async Task HandleShowTodayClick()
+    private async Task HandleShowAllClick()
     {
         searchBookingCode = "";
-        await LoadTodayDeparturesAsync();
+        await LoadAllCheckedInAsync();
     }
 
     private async Task HandleSearchClick()
@@ -94,7 +94,7 @@ else
         loading = true;
         errorMessage = "";
         bookingDetails = string.IsNullOrWhiteSpace(searchBookingCode)
-            ? await CheckInOutService.GetTodayDeparturesAsync()
+            ? await CheckInOutService.GetAllCheckedInAsync()
             : await CheckInOutService.SearchCheckedInByBookingCodeAsync(searchBookingCode);
         loading = false;
     }

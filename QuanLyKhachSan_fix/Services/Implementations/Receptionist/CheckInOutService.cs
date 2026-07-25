@@ -1,13 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using QuanLyKhachSan_fix.Data;
 using QuanLyKhachSan_fix.Models;
-using QuanLyKhachSan_fix.Services.Interfaces;
+using QuanLyKhachSan_fix.Services.Interfaces.Receptionist;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace QuanLyKhachSan_fix.Services.Implementations
+namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
 {
     public class CheckInOutService : ICheckInOutService
     {
@@ -42,6 +42,18 @@ namespace QuanLyKhachSan_fix.Services.Implementations
                 .Include(bd => bd.Booking).ThenInclude(b => b.Customer)
                 .Where(bd => bd.Status == "checked_in")
                 .Where(bd => bd.Booking.CheckOutDate.Date == today)
+                .OrderBy(bd => bd.Room.RoomNumber)
+                .ToListAsync();
+        }
+
+        public async Task<List<BookingDetail>> GetAllCheckedInAsync()
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            return await db.BookingDetails
+                .Include(bd => bd.Room).ThenInclude(r => r.RoomType)
+                .Include(bd => bd.Booking).ThenInclude(b => b.Customer)
+                .Where(bd => bd.Status == "checked_in")
                 .OrderBy(bd => bd.Room.RoomNumber)
                 .ToListAsync();
         }
