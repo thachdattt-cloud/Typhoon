@@ -38,6 +38,17 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Customer
                 return new PaymentResult { Success = false, ErrorMessage = "Đặt phòng đã bị hủy, không thể thanh toán." };
             }
 
+            // SUA: chan tao them payment "cash" khi da co 1 payment "pending" cho cung
+            // booking nay - tranh truong hop khach bam Thanh toan nhieu lan tao ra nhieu
+            // ban ghi cho xu ly trung nhau.
+            bool hasPendingPayment = await db.Payments
+                .AnyAsync(p => p.BookingId == bookingId && p.PaymentStatus == "pending");
+
+            if (hasPendingPayment && method != "online")
+            {
+                return new PaymentResult { Success = false, ErrorMessage = "Đã có 1 yêu cầu thanh toán tiền mặt đang chờ lễ tân xác nhận cho đặt phòng này. Vui lòng đợi xử lý xong trước khi thanh toán tiếp." };
+            }
+
             // "online" gia lap thanh cong ngay; "cash" ghi nhan cho le tan thu tien tai quay
             bool isOnline = method == "online";
 
@@ -72,6 +83,59 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Customer
                 .Where(p => p.BookingId == bookingId)
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
+        }
+
+        public async Task<decimal> GetOutstandingAmountAsync(int bookingId)
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var booking = await db.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
+            if (booking == null) return 0;
+
+            decimal paid = await db.Payments
+                .Where(p => p.BookingId == bookingId && p.PaymentStatus == "success")
+                .SumAsync(p => (decimal?)p.Amount) ?? 0;
+
+            decimal outstanding = (booking.TotalAmount ?? 0) - paid;
+            return outstanding < 0 ? 0 : outstanding;
+        }
+
+        public async Task<PaymentResult> ConfirmCashPaymentAsync(int paymentId, int staffId)
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var payment = await db.Payments
+                .Include(p => p.Booking)
+                .FirstOrDefaultAsync(p => p.Id == paymentId);
+
+            if (payment == null)
+            {
+                return new PaymentResult { Success = false, ErrorMessage = "Không tìm thấy phiếu thanh toán." };
+            }
+
+            if (payment.PaymentStatus != "pending")
+            {
+                return new PaymentResult { Success = false, ErrorMessage = "Phiếu thanh toán này đã được xử lý." };
+            }
+
+            var staffExists = await db.Users.AnyAsync(u => u.Id == staffId);
+            if (!staffExists)
+            {
+                return new PaymentResult { Success = false, ErrorMessage = "Mã nhân viên không tồn tại." };
+            }
+
+            payment.PaymentStatus = "success";
+            payment.PaidAt = DateTime.Now;
+
+            if (payment.Booking.Status == "pending")
+            {
+                payment.Booking.Status = "confirmed";
+                payment.Booking.UpdatedAt = DateTime.Now;
+            }
+
+            await db.SaveChangesAsync();
+
+            return new PaymentResult { Success = true, Payment = payment };
         }
     }
 }

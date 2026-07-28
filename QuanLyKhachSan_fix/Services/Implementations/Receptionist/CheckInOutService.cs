@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using QuanLyKhachSan_fix.Data;
 using QuanLyKhachSan_fix.Models;
+using QuanLyKhachSan_fix.Services.Interfaces.Customer;
 using QuanLyKhachSan_fix.Services.Interfaces.Receptionist;
 using System;
 using System.Collections.Generic;
@@ -12,10 +13,14 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
     public class CheckInOutService : ICheckInOutService
     {
         private readonly IDbContextFactory<AppDbContext> _dbFactory;
+        // SUA: them IPaymentService de kiem tra cong no truoc khi cho tra phong.
+        // Xem giai thich trong CheckOutAsync ben duoi.
+        private readonly IPaymentService _paymentService;
 
-        public CheckInOutService(IDbContextFactory<AppDbContext> dbFactory)
+        public CheckInOutService(IDbContextFactory<AppDbContext> dbFactory, IPaymentService paymentService)
         {
             _dbFactory = dbFactory;
+            _paymentService = paymentService;
         }
 
         public async Task<List<BookingDetail>> GetTodayArrivalsAsync()
@@ -99,6 +104,13 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
             if (detail.Status != "reserved")
                 return new CheckInOutResult { Success = false, ErrorMessage = "Phòng này không ở trạng thái chờ nhận phòng." };
 
+            // SUA: chan check-in neu booking chua duoc xac nhan (chua thanh toan du coc)
+            // - truoc day chi kiem tra BookingDetail.Status == "reserved" (luon dung ngay
+            // sau khi tao booking, du da thanh toan hay chua), nen khach chua tra dong nao
+            // van check-in duoc.
+            if (detail.Booking.Status != "confirmed")
+                return new CheckInOutResult { Success = false, ErrorMessage = "Đặt phòng chưa được xác nhận (khách chưa thanh toán đủ cọc), không thể nhận phòng." };
+
             var staffExists = await db.Users.AnyAsync(u => u.Id == staffId);
             if (!staffExists)
                 return new CheckInOutResult { Success = false, ErrorMessage = "Mã nhân viên không tồn tại." };
@@ -141,6 +153,19 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
             var staffExists = await db.Users.AnyAsync(u => u.Id == staffId);
             if (!staffExists)
                 return new CheckInOutResult { Success = false, ErrorMessage = "Mã nhân viên không tồn tại." };
+
+            // SUA: chan tra phong neu khach con no tien - truoc day khong co kiem tra nao
+            // ca, nen khach co the tra phong va duoc xuat hoa don du con 1-2 payment
+            // "pending" chua bao gio duoc xac nhan (IPaymentService.ConfirmCashPaymentAsync).
+            decimal outstanding = await _paymentService.GetOutstandingAmountAsync(detail.Booking.Id);
+            if (outstanding > 0)
+            {
+                return new CheckInOutResult
+                {
+                    Success = false,
+                    ErrorMessage = $"Khách còn nợ {outstanding:N0} đ. Vui lòng xác nhận thanh toán (ConfirmCashPaymentAsync) trước khi cho trả phòng."
+                };
+            }
 
             detail.Status = "checked_out";
             detail.Room.Status = "available";

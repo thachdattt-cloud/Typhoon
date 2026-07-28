@@ -124,11 +124,31 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Customer
                 detail.Status = "cancelled";
             }
 
+            // SUA: hoan thien luong huy - truoc day tao Cancellation voi Status =
+            // "requested" nhung khong co ham nao trong he thong duyet no ca (khong co
+            // ApproveCancellation/ProcessCancellation), trong khi Booking da bi huy hoan
+            // tat ngay lap tuc -> ban ghi Cancellation bi "mo coi", treo mai o pending, va
+            // tien da thanh toan (neu co) khong duoc tinh hoan/khong hoan.
+            //
+            // Chinh sach don gian: huy truoc gio nhan phong (CheckInDate) it nhat 24h thi
+            // hoan 100% da thanh toan; huy sat gio hon thi mat coc (khong hoan). Vi Booking
+            // da "cancelled" ngay khi khach bam huy (khong co buoc le tan duyet rieng), nen
+            // Cancellation duoc dong luon ("processed") thay vi de "requested" treo vinh vien.
+            decimal totalPaid = await db.Payments
+                .Where(p => p.BookingId == booking.Id && p.PaymentStatus == "success")
+                .SumAsync(p => (decimal?)p.Amount) ?? 0;
+
+            bool cancelledInTime = (booking.CheckInDate - DateTime.Now) >= TimeSpan.FromHours(24);
+            decimal refundAmount = cancelledInTime ? totalPaid : 0;
+            decimal cancellationFee = totalPaid - refundAmount;
+
             db.Cancellations.Add(new Cancellation
             {
                 BookingId = booking.Id,
                 CancelReason = string.IsNullOrWhiteSpace(reason) ? "Khách hàng tự hủy" : reason,
-                Status = "requested",
+                CancellationFee = cancellationFee,
+                RefundAmount = refundAmount,
+                Status = "processed",
                 CancelledAt = DateTime.Now,
                 ProcessedBy = customerId
             });

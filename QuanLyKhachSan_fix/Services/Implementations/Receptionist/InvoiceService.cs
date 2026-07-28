@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using QuanLyKhachSan_fix.Data;
 using QuanLyKhachSan_fix.Models;
+using QuanLyKhachSan_fix.Services.Interfaces.Customer;
 using QuanLyKhachSan_fix.Services.Interfaces.Receptionist;
 using System;
 using System.Collections.Generic;
@@ -12,10 +13,13 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
     public class InvoiceService : IInvoiceService
     {
         private readonly IDbContextFactory<AppDbContext> _dbFactory;
+        // SUA: them IPaymentService de kiem tra cong no truoc khi cho xuat hoa don.
+        private readonly IPaymentService _paymentService;
 
-        public InvoiceService(IDbContextFactory<AppDbContext> dbFactory)
+        public InvoiceService(IDbContextFactory<AppDbContext> dbFactory, IPaymentService paymentService)
         {
             _dbFactory = dbFactory;
+            _paymentService = paymentService;
         }
 
         public async Task<List<Booking>> GetBookingsReadyForInvoiceAsync()
@@ -80,6 +84,19 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
             var issuerExists = await db.Users.AnyAsync(u => u.Id == issuedByUserId);
             if (!issuerExists)
                 return new InvoiceResult { Success = false, ErrorMessage = "Mã nhân viên không tồn tại." };
+
+            // SUA: chan xuat hoa don neu khach con no tien - truoc day khong kiem tra,
+            // nen hoa don van xuat duoc du con Payment "pending" chua duoc xac nhan, khien
+            // khach hang thay "pending" mai ma le tan thi tuong da xong.
+            decimal outstanding = await _paymentService.GetOutstandingAmountAsync(bookingId);
+            if (outstanding > 0)
+            {
+                return new InvoiceResult
+                {
+                    Success = false,
+                    ErrorMessage = $"Khách còn nợ {outstanding:N0} đ. Vui lòng xác nhận thanh toán (ConfirmCashPaymentAsync) trước khi xuất hóa đơn."
+                };
+            }
 
             var totalAmount = booking.TotalAmount.HasValue && booking.TotalAmount.Value > 0
                 ? booking.TotalAmount.Value
