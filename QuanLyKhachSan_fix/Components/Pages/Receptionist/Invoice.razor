@@ -4,6 +4,7 @@
 @using InvoiceModel = QuanLyKhachSan_fix.Models.Invoice
 
 <h3>Xuất hóa đơn</h3>
+<p class="text-muted">Chỉ hiển thị các đơn đã <strong>Trả phòng (checked_out)</strong> và chưa có hóa đơn — bước cuối trong luồng Trả phòng → Xuất hóa đơn.</p>
 
 <div class="card p-3 mb-3">
     <p class="text-muted mb-0">Nhân viên thực hiện: @(CurrentUserState.CurrentUser?.FullName ?? "Chưa đăng nhập")</p>
@@ -30,6 +31,7 @@ else
                 <th>Mã đặt phòng</th>
                 <th>Khách hàng</th>
                 <th>Số phòng đã ở</th>
+                <th>Trạng thái đơn</th>
                 <th>Tổng tiền</th>
                 <th></th>
             </tr>
@@ -41,6 +43,7 @@ else
                     <td>@booking.BookingCode</td>
                     <td>@booking.Customer.FullName</td>
                     <td>@booking.BookingDetails.Count</td>
+                    <td><span class="badge bg-secondary">Đã trả phòng</span></td>
                     <td>@pendingTotals[booking.Id].ToString("N0") đ</td>
                     <td>
                         <button class="btn btn-sm btn-success" @onclick="() => HandleCreateInvoiceClick(booking.Id)">Xuất hóa đơn</button>
@@ -65,6 +68,7 @@ else
                 <th>Mã đặt phòng</th>
                 <th>Khách hàng</th>
                 <th>Tổng tiền</th>
+                <th>Trạng thái</th>
                 <th>Ngày xuất</th>
                 <th>Người xuất</th>
             </tr>
@@ -77,6 +81,7 @@ else
                     <td>@inv.Booking.BookingCode</td>
                     <td>@inv.Booking.Customer.FullName</td>
                     <td>@inv.TotalAmount?.ToString("N0") đ</td>
+                    <td><span class="badge bg-success">Hoàn tất</span></td>
                     <td>@inv.IssuedAt.ToString("dd/MM/yyyy HH:mm")</td>
                     <td>@inv.IssuedByUser?.FullName</td>
                 </tr>

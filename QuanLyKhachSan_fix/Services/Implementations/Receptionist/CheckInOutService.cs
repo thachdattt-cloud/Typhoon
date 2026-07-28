@@ -27,6 +27,7 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
                 .Include(bd => bd.Room).ThenInclude(r => r.RoomType)
                 .Include(bd => bd.Booking).ThenInclude(b => b.Customer)
                 .Where(bd => bd.Status == "reserved")
+                .Where(bd => bd.Booking.Status == "confirmed")
                 .Where(bd => bd.Booking.CheckInDate.Date == today)
                 .OrderBy(bd => bd.Room.RoomNumber)
                 .ToListAsync();
@@ -66,6 +67,7 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
                 .Include(bd => bd.Room).ThenInclude(r => r.RoomType)
                 .Include(bd => bd.Booking).ThenInclude(b => b.Customer)
                 .Where(bd => bd.Status == "reserved")
+                .Where(bd => bd.Booking.Status == "confirmed")
                 .Where(bd => bd.Booking.BookingCode != null && bd.Booking.BookingCode.Contains(bookingCode))
                 .OrderBy(bd => bd.Room.RoomNumber)
                 .ToListAsync();
@@ -98,6 +100,9 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
 
             if (detail.Status != "reserved")
                 return new CheckInOutResult { Success = false, ErrorMessage = "Phòng này không ở trạng thái chờ nhận phòng." };
+
+            if (detail.Booking.Status != "confirmed")
+                return new CheckInOutResult { Success = false, ErrorMessage = "Đơn đặt phòng chưa được xác nhận thanh toán, chưa thể nhận phòng." };
 
             var staffExists = await db.Users.AnyAsync(u => u.Id == staffId);
             if (!staffExists)
