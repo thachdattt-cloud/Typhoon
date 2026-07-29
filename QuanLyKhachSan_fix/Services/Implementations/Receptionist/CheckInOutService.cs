@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using QuanLyKhachSan_fix.Data;
 using QuanLyKhachSan_fix.Models;
+using QuanLyKhachSan_fix.Services.Interfaces.Customer;
 using QuanLyKhachSan_fix.Services.Interfaces.Receptionist;
 using System;
 using System.Collections.Generic;
@@ -12,10 +13,12 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
     public class CheckInOutService : ICheckInOutService
     {
         private readonly IDbContextFactory<AppDbContext> _dbFactory;
+        private readonly IPaymentService _paymentService;
 
-        public CheckInOutService(IDbContextFactory<AppDbContext> dbFactory)
+        public CheckInOutService(IDbContextFactory<AppDbContext> dbFactory, IPaymentService paymentService)
         {
             _dbFactory = dbFactory;
+            _paymentService = paymentService;
         }
 
         public async Task<List<BookingDetail>> GetTodayArrivalsAsync()
@@ -62,6 +65,7 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
         {
             await using var db = await _dbFactory.CreateDbContextAsync();
 
+            // SUA: bo dieu kien Booking.Status == "confirmed", ly do giong GetTodayArrivalsAsync.
             return await db.BookingDetails
                 .Include(bd => bd.Room).ThenInclude(r => r.RoomType)
                 .Include(bd => bd.Booking).ThenInclude(b => b.Customer)
@@ -98,6 +102,12 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
 
             if (detail.Status != "reserved")
                 return new CheckInOutResult { Success = false, ErrorMessage = "Phòng này không ở trạng thái chờ nhận phòng." };
+
+            // SUA: bo yeu cau Booking.Status phai "confirmed". Theo luong moi, thanh toan
+            // dien ra NGAY LUC nhan phong (le tan thu tien qua CreateStaffCollectedPaymentAsync
+            // truoc khi goi CheckInAsync nay) - nen luc goi ham nay Booking co the van con
+            // "pending" cho toi khi thu tien xong. Viec bat buoc da thu du tien duoc kiem
+            // tra rieng o UI (CheckIn.razor) truoc khi cho phep bam "Nhan phong".
 
             var staffExists = await db.Users.AnyAsync(u => u.Id == staffId);
             if (!staffExists)
@@ -141,6 +151,16 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
             var staffExists = await db.Users.AnyAsync(u => u.Id == staffId);
             if (!staffExists)
                 return new CheckInOutResult { Success = false, ErrorMessage = "Mã nhân viên không tồn tại." };
+
+            decimal outstanding = await _paymentService.GetOutstandingAmountAsync(detail.Booking.Id);
+            if (outstanding > 0)
+            {
+                return new CheckInOutResult
+                {
+                    Success = false,
+                    ErrorMessage = $"Khách còn nợ {outstanding:N0} đ. Vui lòng thu tiền trước khi cho trả phòng."
+                };
+            }
 
             detail.Status = "checked_out";
             detail.Room.Status = "available";

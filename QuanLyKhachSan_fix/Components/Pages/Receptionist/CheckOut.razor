@@ -3,6 +3,7 @@
 @inject QuanLyKhachSan_fix.Services.CurrentUserState CurrentUserState
 
 <h3>Trả phòng</h3>
+<p class="text-muted">Chỉ hiển thị các phòng đang ở trạng thái <strong>Nhận phòng (checked_in)</strong> — đúng theo luồng Nhận phòng → Trả phòng.</p>
 
 <div class="card p-3 mb-3">
     <div class="row g-2 align-items-end">
@@ -43,6 +44,7 @@ else
                 <th>Loại phòng</th>
                 <th>Nhận phòng</th>
                 <th>Trả phòng</th>
+                <th>Trạng thái đơn</th>
                 <th></th>
             </tr>
         </thead>
@@ -56,6 +58,7 @@ else
                     <td>@bd.Room.RoomType.Name</td>
                     <td>@bd.Booking.CheckInDate.ToString("dd/MM/yyyy")</td>
                     <td>@bd.Booking.CheckOutDate.ToString("dd/MM/yyyy")</td>
+                    <td><span class="badge bg-info text-dark">Đang lưu trú</span></td>
                     <td>
                         <button class="btn btn-sm btn-warning" @onclick="() => HandleCheckOutClick(bd.Id)">Trả phòng</button>
                     </td>

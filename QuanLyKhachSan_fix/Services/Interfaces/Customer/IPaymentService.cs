@@ -13,10 +13,14 @@ namespace QuanLyKhachSan_fix.Services.Interfaces.Customer
 
     public interface IPaymentService
     {
-        // Tao 1 lan thanh toan cho booking (method: "online" hoac "cash")
         Task<PaymentResult> CreatePaymentAsync(int bookingId, decimal amount, string method);
 
-        // Lich su thanh toan cua 1 booking
         Task<List<Payment>> GetPaymentsByBookingAsync(int bookingId);
+
+        Task<decimal> GetOutstandingAmountAsync(int bookingId);
+
+        Task<PaymentResult> ConfirmCashPaymentAsync(int paymentId, int staffId);
+
+        Task<PaymentResult> CreateStaffCollectedPaymentAsync(int bookingId, decimal amount, string method, int staffId);
     }
 }
