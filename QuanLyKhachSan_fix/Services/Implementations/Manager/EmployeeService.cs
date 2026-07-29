@@ -41,6 +41,11 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Manager
             {
                 return new EmployeeResult { Success = false, ErrorMessage = "Tên đăng nhập đã được sử dụng." };
             }
+            bool emailExists = await db.Users.AnyAsync(u => u.Email == email);
+            if (emailExists)
+            {
+                return new EmployeeResult { Success = false, ErrorMessage = "Email này đã được sử dụng." };
+            }
 
             var user = new User
             {
@@ -100,5 +105,6 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Manager
             await db.SaveChangesAsync();
             return true;
         }
+
     }
 }

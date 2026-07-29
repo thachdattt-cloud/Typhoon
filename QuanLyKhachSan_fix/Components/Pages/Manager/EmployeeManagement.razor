@@ -1,6 +1,10 @@
 ﻿@page "/manager/employees"
+@using System.Linq
+@using System.Text.RegularExpressions
 @inject QuanLyKhachSan_fix.Services.Interfaces.Manager.IEmployeeService EmployeeService
-
+@inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
+<AuthorizeRole Roles="manager">
 <h3>Quản lý nhân viên</h3>
 
 <div class="card p-3 mb-3">
@@ -9,8 +13,11 @@
         <div class="col-md-2"><input class="form-control" placeholder="Username" @bind="formUsername" /></div>
         <div class="col-md-2"><input class="form-control" type="password" placeholder="Mật khẩu" @bind="formPassword" /></div>
         <div class="col-md-2"><input class="form-control" placeholder="Họ tên" @bind="formFullName" /></div>
-        <div class="col-md-2"><input class="form-control" placeholder="Email" @bind="formEmail" /></div>
-        <div class="col-md-2"><input class="form-control" placeholder="SĐT" @bind="formPhone" /></div>
+        <div class="col-md-2"><input class="form-control" type="email" placeholder="ten@vidu.com" @bind="formEmail" /></div>
+        <div class="col-md-2">
+            <input class="form-control" type="tel" inputmode="numeric" maxlength="11" placeholder="SĐT"
+                   value="@formPhone" @oninput="HandlePhoneInput" />
+        </div>
         <div class="col-md-2">
             <select class="form-control" @bind="formPosition">
                 <option value="receptionist">Lễ tân</option>
@@ -53,8 +60,9 @@ else
         </tbody>
     </table>
 }
-
+</AuthorizeRole>
 @code {
+
     private bool loading = true;
     private List<Employee> employees = new();
 
@@ -69,7 +77,16 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (!AccessGuard.Ensure(UserState, NavigationManager, "manager"))
+            return;
         await LoadEmployeesAsync();
+    }
+    private static readonly Regex EmailRegex = new(@"^[^\s@]+@[^\s@]+\.[^\s@]+$", RegexOptions.Compiled);
+
+    private void HandlePhoneInput(ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString() ?? "";
+        formPhone = new string(raw.Where(char.IsDigit).ToArray());
     }
 
     private async Task LoadEmployeesAsync()
@@ -82,9 +99,37 @@ else
     private async Task HandleCreateClick()
     {
         errorMessage = "";
-        var result = await EmployeeService.CreateEmployeeAsync(
-            formUsername, formPassword, formFullName, formEmail, formPhone, formPosition, formSalary);
 
+        if (string.IsNullOrWhiteSpace(formUsername) || string.IsNullOrWhiteSpace(formPassword))
+        {
+            errorMessage = "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(formEmail))
+        {
+            errorMessage = "Vui lòng nhập email.";
+            return;
+        }
+        if (!EmailRegex.IsMatch(formEmail))
+        {
+            errorMessage = "Email không đúng định dạng (ví dụ: ten@vidu.com).";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(formPhone))
+        {
+            errorMessage = "Vui lòng nhập số điện thoại.";
+            return;
+        }
+        if (formPhone.Length < 9 || formPhone.Length > 11)
+        {
+            errorMessage = "Số điện thoại phải có từ 9 đến 11 chữ số.";
+            return;
+        }
+
+        var result = await EmployeeService.CreateEmployeeAsync(
+           formUsername, formPassword, formFullName, formEmail, formPhone, formPosition, formSalary);
+        errorMessage = "";
+       
         if (!result.Success)
         {
             errorMessage = result.ErrorMessage;

@@ -6,7 +6,9 @@
 @inject QuanLyKhachSan_fix.Services.Interfaces.Customer.IBookingService BookingService
 @inject QuanLyKhachSan_fix.Services.Interfaces.Customer.IPaymentService PaymentService
 @inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
 
+<AuthorizeRole Roles="customer">
 <div class="container mt-4" style="max-width: 800px;">
     <h3 class="mb-4 fw-bold">Thanh toán hóa đơn</h3>
 
@@ -95,7 +97,7 @@
         }
     }
 </div>
-
+</AuthorizeRole>
 @code {
     [SupplyParameterFromQuery] public int BookingId { get; set; }
 
@@ -110,6 +112,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (!AccessGuard.Ensure(UserState, NavigationManager, "customer"))
+            return;
         if (UserState.CurrentUser == null)
         {
             isLoading = false;

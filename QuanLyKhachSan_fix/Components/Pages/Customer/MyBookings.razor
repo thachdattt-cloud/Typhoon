@@ -8,6 +8,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 
+<AuthorizeRole Roles="customer">
 <div class="my-bookings">
     <h3>Đặt phòng của tôi</h3>
 
@@ -67,7 +68,7 @@
         }
     }
 </div>
-
+</AuthorizeRole>
 @code {
     private List<QuanLyKhachSan_fix.Models.Booking>? bookings;
     private bool isLoading = true;
@@ -75,6 +76,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (!AccessGuard.Ensure(UserState, NavigationManager, "customer"))
+            return;
         if (UserState.CurrentUser != null)
         {
             await LoadBookingsAsync();

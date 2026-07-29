@@ -1,7 +1,10 @@
 ﻿@page "/receptionist/check-out"
 @inject QuanLyKhachSan_fix.Services.Interfaces.Receptionist.ICheckInOutService CheckInOutService
 @inject QuanLyKhachSan_fix.Services.CurrentUserState CurrentUserState
+@inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
 
+<AuthorizeRole Roles="receptionist">
 <h3>Trả phòng</h3>
 <p class="text-muted">Chỉ hiển thị các phòng đang ở trạng thái <strong>Nhận phòng (checked_in)</strong> — đúng theo luồng Nhận phòng → Trả phòng.</p>
 
@@ -67,7 +70,7 @@ else
         </tbody>
     </table>
 }
-
+</AuthorizeRole>
 @code {
     private bool loading = true;
     private List<QuanLyKhachSan_fix.Models.BookingDetail> bookingDetails = new();
@@ -76,6 +79,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (!AccessGuard.Ensure(UserState, NavigationManager, "receptionist"))
+            return;
         await LoadAllCheckedInAsync();
     }
 

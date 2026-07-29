@@ -4,7 +4,9 @@
 @inject QuanLyKhachSan_fix.Services.Interfaces.Customer.IPaymentService PaymentService
 @inject QuanLyKhachSan_fix.Services.Interfaces.Receptionist.IInvoiceService InvoiceService
 @inject QuanLyKhachSan_fix.Services.CurrentUserState CurrentUserState
-
+@inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
+<AuthorizeRole Roles="receptionist">
 <h3>Nhận phòng</h3>
 
 <div class="card p-3 mb-3">
@@ -108,7 +110,7 @@ else
         </tbody>
     </table>
 }
-
+</AuthorizeRole>
 @code {
     private bool loading = true;
     private List<QuanLyKhachSan_fix.Models.BookingDetail> bookingDetails = new();
@@ -124,6 +126,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (!AccessGuard.Ensure(UserState, NavigationManager, "receptionist"))
+            return;
         await LoadTodayArrivalsAsync();
     }
 

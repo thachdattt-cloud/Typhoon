@@ -1,6 +1,8 @@
 ﻿@page "/manager/room-types"
 @inject QuanLyKhachSan_fix.Services.Interfaces.Manager.IRoomService RoomService
-
+@inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
+<AuthorizeRole Roles="manager">
 <h3>Quản lý loại phòng & giá</h3>
 
 <div class="card p-3 mb-3">
@@ -61,7 +63,7 @@ else
         </tbody>
     </table>
 }
-
+</AuthorizeRole>
 @code {
     private bool loading = true;
     private List<RoomType> roomTypes = new();
@@ -74,6 +76,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (!AccessGuard.Ensure(UserState, NavigationManager, "manager"))
+            return;
         await LoadRoomTypesAsync();
     }
 

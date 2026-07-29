@@ -7,7 +7,7 @@
 @inject QuanLyKhachSan_fix.Services.Interfaces.Customer.IBookingService BookingService
 @inject CurrentUserState UserState
 @inject NavigationManager NavigationManager
-
+<AuthorizeRole Roles="customer">
 <div class="container mt-4">
     <h3 class="mb-4 fw-bold">Xác nhận đặt phòng</h3>
 
@@ -73,7 +73,7 @@
         </div>
     }
 </div>
-
+</AuthorizeRole>
 @code {
     [SupplyParameterFromQuery] public int RoomId { get; set; }
     [SupplyParameterFromQuery] public string? CheckIn { get; set; }
@@ -92,6 +92,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (!AccessGuard.Ensure(UserState, NavigationManager, "customer"))
+            return;
         if (UserState.CurrentUser == null)
         {
             isLoading = false;

@@ -5,6 +5,7 @@
 @inject NavigationManager NavigationManager
 @inject CurrentUserState UserState
 
+<AuthorizeRole Roles="customer">
 <div class="container mt-4">
     <!-- Banner Chào Mừng -->
     <div class="bg-primary bg-gradient text-white p-4 rounded-3 shadow-sm mb-4">
@@ -73,8 +74,15 @@
         box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.12) !important;
     }
 </style>
-
+</AuthorizeRole>
 @code {
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AccessGuard.Ensure(UserState, NavigationManager, "customer"))
+            return;
+
+        // ... code load data cũ ...
+    }
     private void HandleRoomSearchClick()
     {
         NavigationManager.NavigateTo("/customer/room-search");

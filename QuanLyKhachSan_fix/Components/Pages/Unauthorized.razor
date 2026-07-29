@@ -1,0 +1,24 @@
+﻿@page "/unauthorized"
+@using QuanLyKhachSan_fix.Services
+@inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
+
+<div class="d-flex justify-content-center align-items-center" style="min-height: 60vh;">
+    <div class="card p-4 text-center" style="max-width: 420px;">
+        <h3 class="text-warning mb-3">Không có quyền truy cập</h3>
+        <p class="text-muted">
+            Tài khoản của bạn không được phép mở trang này.
+        </p>
+        @if (UserState.IsLoggedIn)
+        {
+            <p class="mb-3">
+                Đang đăng nhập với vai trò: <strong>@UserState.CurrentUser!.Role</strong>
+            </p>
+            <a class="btn btn-primary" href="@UserState.GetHomePath()">Về trang của bạn</a>
+        }
+        else
+        {
+            <a class="btn btn-primary" href="/login">Đăng nhập</a>
+        }
+    </div>
+</div>

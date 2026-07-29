@@ -21,11 +21,25 @@
     {
         <div class="nav-item px-3 py-2">
             <span class="text-white">Xin chào, @CurrentUserState.CurrentUser!.FullName</span>
+            <div class="text-white-50 small">(@CurrentUserState.CurrentUser!.Role)</div>
         </div>
         <div class="nav-item px-3">
             <button class="nav-link btn btn-link text-start p-0" @onclick="HandleLogoutClick">
                 <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Đăng xuất
             </button>
+        </div>
+    }
+    else
+    {
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="login">
+                <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Đăng nhập
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="register">
+                <span class="bi bi-person-plus" aria-hidden="true"></span> Đăng ký
+            </NavLink>
         </div>
     }
     @if (CurrentUserState.CurrentUser?.Role == "manager")

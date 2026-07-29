@@ -8,7 +8,7 @@
 @inject QuanLyKhachSan_fix.Services.Interfaces.Customer.IBookingEditRequestService EditRequestService
 @inject CurrentUserState UserState
 @inject NavigationManager NavigationManager
-
+<AuthorizeRole Roles="customer">
 <div class="edit-request-page">
     <h3>Gia hạn / Đổi phòng</h3>
 
@@ -78,7 +78,7 @@
         }
     }
 </div>
-
+</AuthorizeRole>
 @code {
     [SupplyParameterFromQuery] public int BookingId { get; set; }
     [SupplyParameterFromQuery] public int BookingDetailId { get; set; }
@@ -96,6 +96,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (!AccessGuard.Ensure(UserState, NavigationManager, "customer"))
+            return;
         if (UserState.CurrentUser == null)
         {
             isLoading = false;

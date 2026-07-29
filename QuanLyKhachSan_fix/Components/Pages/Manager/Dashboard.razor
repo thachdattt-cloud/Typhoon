@@ -1,7 +1,9 @@
 ﻿@page "/manager/dashboard"
 @inject QuanLyKhachSan_fix.Services.Interfaces.Manager.IReportService ReportService
 @inject QuanLyKhachSan_fix.Services.Interfaces.Manager.IEmployeeService EmployeeService
-
+@inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
+<AuthorizeRole Roles="manager">
 <h3>Trang chủ Quản lý</h3>
 
 @if (loading)
@@ -38,15 +40,18 @@ else
         <a href="/manager/revenue-report" class="btn btn-outline-primary">Báo cáo doanh thu</a>
     </div>
 }
-
+</AuthorizeRole>
 @code {
     private bool loading = true;
     private decimal monthlyRevenue;
     private double occupancyRate;
     private int employeeCount;
 
+
     protected override async Task OnInitializedAsync()
     {
+        if (!AccessGuard.Ensure(UserState, NavigationManager, "manager"))
+            return;
         var now = DateTime.Now;
         monthlyRevenue = await ReportService.GetMonthlyRevenueAsync(now.Year, now.Month);
         occupancyRate = await ReportService.GetOccupancyRateAsync(now.AddDays(-30), now);

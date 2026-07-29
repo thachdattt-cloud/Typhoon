@@ -1,6 +1,10 @@
 ﻿@page "/manager/customers"
 @inject QuanLyKhachSan_fix.Services.Interfaces.Manager.ICustomerAccountService CustomerAccountService
+@inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
 
+
+<AuthorizeRole Roles="manager">
 <h3>Quản lý tài khoản khách hàng</h3>
 
 @if (loading)
@@ -52,7 +56,7 @@ else
         </div>
     }
 }
-
+</AuthorizeRole>
 @code {
     private bool loading = true;
     private List<User> customers = new();
@@ -61,6 +65,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (!AccessGuard.Ensure(UserState, NavigationManager, "manager"))
+            return;
         customers = await CustomerAccountService.GetAllCustomersAsync();
         loading = false;
     }

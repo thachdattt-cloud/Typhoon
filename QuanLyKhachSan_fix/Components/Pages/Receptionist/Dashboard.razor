@@ -1,6 +1,10 @@
 ﻿@page "/receptionist/dashboard"
 @inject QuanLyKhachSan_fix.Services.Interfaces.Receptionist.ICheckInOutService CheckInOutService
+@inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
 
+
+<AuthorizeRole Roles="receptionist">
 <h3>Trang chủ Lễ tân</h3>
 
 @if (loading)
@@ -31,7 +35,7 @@ else
         <a href="/receptionist/invoice" class="btn btn-outline-primary">Xuất hóa đơn</a>
     </div>
 }
-
+</AuthorizeRole>
 @code {
     private bool loading = true;
     private int arrivalsCount;
@@ -39,6 +43,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (!AccessGuard.Ensure(UserState, NavigationManager, "receptionist"))
+            return;
         var arrivals = await CheckInOutService.GetTodayArrivalsAsync();
         var departures = await CheckInOutService.GetTodayDeparturesAsync();
         arrivalsCount = arrivals.Count;

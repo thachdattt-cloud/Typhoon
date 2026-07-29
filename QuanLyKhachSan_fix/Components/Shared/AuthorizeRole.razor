@@ -1,0 +1,60 @@
+﻿@using QuanLyKhachSan_fix.Services
+@inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
+
+@if (_authorized)
+{
+    @ChildContent
+}
+else if (_checked)
+{
+    <div class="alert alert-warning m-3" role="alert">
+        <h5 class="alert-heading">Không có quyền truy cập</h5>
+        <p class="mb-2">Bạn không được phép xem trang này@(string.IsNullOrEmpty(_requiredRoles) ? "" : $" (yêu cầu: {_requiredRoles})").</p>
+        <a class="btn btn-sm btn-outline-primary" href="@_fallbackUrl">Quay lại trang phù hợp</a>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string Roles { get; set; } = "";
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public bool RedirectToLogin { get; set; } = true;
+
+    private bool _authorized;
+    private bool _checked;
+    private string _fallbackUrl = "/";
+    private string _requiredRoles = "";
+
+    protected override void OnParametersSet()
+    {
+        Evaluate();
+    }
+
+    private void Evaluate()
+    {
+        _requiredRoles = Roles?.Trim() ?? "";
+        var allowed = _requiredRoles
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (!UserState.IsLoggedIn)
+        {
+            _authorized = false;
+            _checked = true;
+            _fallbackUrl = "/login";
+            if (RedirectToLogin)
+            {
+                NavigationManager.NavigateTo("/login");
+            }
+            return;
+        }
+
+        _authorized = allowed.Length == 0 || UserState.HasAnyRole(allowed);
+        _fallbackUrl = UserState.GetHomePath();
+        _checked = true;
+    }
+}

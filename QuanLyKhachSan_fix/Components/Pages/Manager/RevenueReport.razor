@@ -5,7 +5,10 @@
 }
 @page "/manager/revenue-report"
 @inject QuanLyKhachSan_fix.Services.Interfaces.Manager.IReportService ReportService
+@inject CurrentUserState UserState
+@inject NavigationManager NavigationManager
 
+<AuthorizeRole Roles="manager">
 <h3>Báo cáo doanh thu & công suất phòng</h3>
 
 <div class="row g-2 mb-3">
@@ -53,7 +56,7 @@
         </tbody>
     </table>
 }
-
+</AuthorizeRole>
 @code {
     private int selectedMonth = DateTime.Now.Month;
     private int selectedYear = DateTime.Now.Year;
@@ -63,6 +66,11 @@
     private double occupancyRate;
     private List<QuanLyKhachSan_fix.Services.Interfaces.Manager.RevenueByRoomType> revenueByRoomType = new();
 
+    protected override void OnInitialized()
+    {
+        if (!AccessGuard.Ensure(UserState, NavigationManager, "manager"))
+            return;
+    }
     private async Task HandleGenerateClick()
     {
         totalRevenue = await ReportService.GetMonthlyRevenueAsync(selectedYear, selectedMonth);
