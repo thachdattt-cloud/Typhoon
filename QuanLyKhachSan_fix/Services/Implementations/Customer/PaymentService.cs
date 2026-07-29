@@ -38,9 +38,6 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Customer
                 return new PaymentResult { Success = false, ErrorMessage = "Đặt phòng đã bị hủy, không thể thanh toán." };
             }
 
-            // SUA: chan tao them payment "cash" khi da co 1 payment "pending" cho cung
-            // booking nay - tranh truong hop khach bam Thanh toan nhieu lan tao ra nhieu
-            // ban ghi cho xu ly trung nhau.
             bool hasPendingPayment = await db.Payments
                 .AnyAsync(p => p.BookingId == bookingId && p.PaymentStatus == "pending");
 
@@ -49,7 +46,6 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Customer
                 return new PaymentResult { Success = false, ErrorMessage = "Đã có 1 yêu cầu thanh toán tiền mặt đang chờ lễ tân xác nhận cho đặt phòng này. Vui lòng đợi xử lý xong trước khi thanh toán tiếp." };
             }
 
-            // "online" gia lap thanh cong ngay; "cash" ghi nhan cho le tan thu tien tai quay
             bool isOnline = method == "online";
 
             var payment = new Payment
@@ -64,7 +60,6 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Customer
 
             db.Payments.Add(payment);
 
-            // Neu thanh toan online thanh cong va booking dang pending -> chuyen sang confirmed
             if (isOnline && booking.Status == "pending")
             {
                 booking.Status = "confirmed";
@@ -131,6 +126,57 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Customer
             {
                 payment.Booking.Status = "confirmed";
                 payment.Booking.UpdatedAt = DateTime.Now;
+            }
+
+            await db.SaveChangesAsync();
+
+            return new PaymentResult { Success = true, Payment = payment };
+        }
+
+        public async Task<PaymentResult> CreateStaffCollectedPaymentAsync(int bookingId, decimal amount, string method, int staffId)
+        {
+            if (amount <= 0)
+            {
+                return new PaymentResult { Success = false, ErrorMessage = "Số tiền thanh toán không hợp lệ." };
+            }
+
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var booking = await db.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
+            if (booking == null)
+            {
+                return new PaymentResult { Success = false, ErrorMessage = "Không tìm thấy đặt phòng." };
+            }
+
+            if (booking.Status == "cancelled")
+            {
+                return new PaymentResult { Success = false, ErrorMessage = "Đặt phòng đã bị hủy, không thể thanh toán." };
+            }
+
+            var staffExists = await db.Users.AnyAsync(u => u.Id == staffId);
+            if (!staffExists)
+            {
+                return new PaymentResult { Success = false, ErrorMessage = "Mã nhân viên không tồn tại." };
+            }
+
+            // Le tan truc tiep thu tien tai quay -> ghi nhan "success" ngay, khong qua
+            // trang thai "pending" (khac voi khach tu tao qua app).
+            var payment = new Payment
+            {
+                BookingId = bookingId,
+                Amount = amount,
+                PaymentMethod = method,
+                PaymentStatus = "success",
+                PaidAt = DateTime.Now,
+                CreatedAt = DateTime.Now
+            };
+
+            db.Payments.Add(payment);
+
+            if (booking.Status == "pending")
+            {
+                booking.Status = "confirmed";
+                booking.UpdatedAt = DateTime.Now;
             }
 
             await db.SaveChangesAsync();

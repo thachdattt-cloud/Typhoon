@@ -1,4 +1,6 @@
 ﻿@page "/register"
+@using System.Linq
+@using System.Text.RegularExpressions
 @inject QuanLyKhachSan_fix.Services.Interfaces.Manager.IAuthService AuthService
 @inject CurrentUserState CurrentUserState
 @inject NavigationManager NavManager
@@ -21,11 +23,12 @@
         </div>
         <div class="mb-2">
             <label>Email</label>
-            <input class="form-control" @bind="email" />
+            <input class="form-control" type="email" placeholder="ten@vidu.com" @bind="email" />
         </div>
         <div class="mb-2">
             <label>Số điện thoại</label>
-            <input class="form-control" @bind="phone" />
+            <input class="form-control" type="tel" inputmode="numeric" maxlength="11"
+                   value="@phone" @oninput="HandlePhoneInput" />
         </div>
 
         @if (!string.IsNullOrEmpty(errorMessage))
@@ -44,6 +47,8 @@
 </div>
 
 @code {
+    private static readonly Regex EmailRegex = new(@"^[^\s@]+@[^\s@]+\.[^\s@]+$", RegexOptions.Compiled);
+
     private string username = "";
     private string password = "";
     private string fullName = "";
@@ -52,9 +57,46 @@
     private string errorMessage = "";
     private bool loading = false;
 
+    private void HandlePhoneInput(ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString() ?? "";
+        phone = new string(raw.Where(char.IsDigit).ToArray());
+    }
+
     private async Task HandleRegisterClick()
     {
         errorMessage = "";
+
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+        {
+            errorMessage = "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            errorMessage = "Vui lòng nhập email.";
+            return;
+        }
+
+        if (!EmailRegex.IsMatch(email))
+        {
+            errorMessage = "Email không đúng định dạng (ví dụ: ten@vidu.com).";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(phone))
+        {
+            errorMessage = "Vui lòng nhập số điện thoại.";
+            return;
+        }
+
+        if (phone.Length < 9 || phone.Length > 11)
+        {
+            errorMessage = "Số điện thoại phải có từ 9 đến 11 chữ số.";
+            return;
+        }
+
         loading = true;
 
         var result = await AuthService.RegisterAsync(username, password, fullName, email, phone);
@@ -67,7 +109,6 @@
             return;
         }
 
-        // Dang ky xong tu dong dang nhap luon, chuyen thang vao trang chu khach hang
         CurrentUserState.SetUser(result.User!);
         NavManager.NavigateTo("/customer/home");
     }

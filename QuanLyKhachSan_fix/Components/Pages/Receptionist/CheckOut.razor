@@ -1,10 +1,9 @@
 ﻿@page "/receptionist/check-out"
-@using System.Linq
 @inject QuanLyKhachSan_fix.Services.Interfaces.Receptionist.ICheckInOutService CheckInOutService
-@inject QuanLyKhachSan_fix.Services.Interfaces.Customer.IPaymentService PaymentService
 @inject QuanLyKhachSan_fix.Services.CurrentUserState CurrentUserState
 
 <h3>Trả phòng</h3>
+<p class="text-muted">Chỉ hiển thị các phòng đang ở trạng thái <strong>Nhận phòng (checked_in)</strong> — đúng theo luồng Nhận phòng → Trả phòng.</p>
 
 <div class="card p-3 mb-3">
     <div class="row g-2 align-items-end">
@@ -26,44 +25,6 @@
     }
 </div>
 
-@if (pendingBookingId != null)
-{
-    <div class="card p-3 mb-3 border-warning">
-        <h5 class="mb-2">Xác nhận thanh toán còn thiếu - @pendingBookingCode</h5>
-        @if (pendingPayments.Count == 0)
-        {
-            <p class="text-muted mb-0">Không có phiếu thanh toán "pending" nào cho đặt phòng này. Kiểm tra lại số tiền còn nợ (có thể khách chưa gửi yêu cầu thanh toán nào).</p>
-        }
-        else
-        {
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>Ngày gửi</th>
-                        <th>Số tiền</th>
-                        <th>Hình thức</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var p in pendingPayments)
-                    {
-                        <tr>
-                            <td>@p.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
-                            <td>@p.Amount.ToString("N0") đ</td>
-                            <td>@(p.PaymentMethod == "online" ? "Online" : "Tiền mặt")</td>
-                            <td>
-                                <button class="btn btn-sm btn-success" @onclick="() => HandleConfirmPaymentClick(p.Id)">Xác nhận đã thu</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
-        <button class="btn btn-sm btn-outline-secondary" style="width: fit-content;" @onclick="HandleClosePendingPanel">Đóng</button>
-    </div>
-}
-
 @if (loading)
 {
     <p>Đang tải...</p>
@@ -83,6 +44,7 @@ else
                 <th>Loại phòng</th>
                 <th>Nhận phòng</th>
                 <th>Trả phòng</th>
+                <th>Trạng thái đơn</th>
                 <th></th>
             </tr>
         </thead>
@@ -96,8 +58,9 @@ else
                     <td>@bd.Room.RoomType.Name</td>
                     <td>@bd.Booking.CheckInDate.ToString("dd/MM/yyyy")</td>
                     <td>@bd.Booking.CheckOutDate.ToString("dd/MM/yyyy")</td>
+                    <td><span class="badge bg-info text-dark">Đang lưu trú</span></td>
                     <td>
-                        <button class="btn btn-sm btn-warning" @onclick="() => HandleCheckOutClick(bd.Id, bd.Booking.Id, bd.Booking.BookingCode)">Trả phòng</button>
+                        <button class="btn btn-sm btn-warning" @onclick="() => HandleCheckOutClick(bd.Id)">Trả phòng</button>
                     </td>
                 </tr>
             }
@@ -110,10 +73,6 @@ else
     private List<QuanLyKhachSan_fix.Models.BookingDetail> bookingDetails = new();
     private string searchBookingCode = "";
     private string errorMessage = "";
-
-    private int? pendingBookingId;
-    private string pendingBookingCode = "";
-    private List<QuanLyKhachSan_fix.Models.Payment> pendingPayments = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -143,7 +102,7 @@ else
         loading = false;
     }
 
-    private async Task HandleCheckOutClick(int bookingDetailId, int bookingId, string? bookingCode)
+    private async Task HandleCheckOutClick(int bookingDetailId)
     {
         errorMessage = "";
         var staffId = CurrentUserState.CurrentUser?.Id;
@@ -157,53 +116,9 @@ else
         if (!result.Success)
         {
             errorMessage = result.ErrorMessage ?? "";
-
-            // Neu ly do khong tra phong duoc la vi con no tien, mo bang danh sach
-            // payment "pending" de le tan xac nhan da thu tien ngay tai day.
-            if (errorMessage.Contains("còn nợ"))
-            {
-                pendingBookingId = bookingId;
-                pendingBookingCode = bookingCode ?? $"#{bookingId}";
-                var allPayments = await PaymentService.GetPaymentsByBookingAsync(bookingId);
-                pendingPayments = allPayments.Where(p => p.PaymentStatus == "pending").ToList();
-            }
-
             return;
         }
 
-        pendingBookingId = null;
         await HandleSearchClick();
-    }
-
-    private async Task HandleConfirmPaymentClick(int paymentId)
-    {
-        var staffId = CurrentUserState.CurrentUser?.Id;
-        if (staffId == null || staffId <= 0)
-        {
-            errorMessage = "Bạn cần đăng nhập trước khi thực hiện thao tác này.";
-            return;
-        }
-
-        var result = await PaymentService.ConfirmCashPaymentAsync(paymentId, staffId.Value);
-        if (!result.Success)
-        {
-            errorMessage = result.ErrorMessage ?? "";
-            return;
-        }
-
-        // Sau khi xac nhan, lam moi lai danh sach pending cho booking dang xet
-        if (pendingBookingId.HasValue)
-        {
-            var allPayments = await PaymentService.GetPaymentsByBookingAsync(pendingBookingId.Value);
-            pendingPayments = allPayments.Where(p => p.PaymentStatus == "pending").ToList();
-        }
-
-        errorMessage = "Đã xác nhận thanh toán. Bấm \"Trả phòng\" lại để tiếp tục.";
-    }
-
-    private void HandleClosePendingPanel()
-    {
-        pendingBookingId = null;
-        pendingPayments = new();
     }
 }
