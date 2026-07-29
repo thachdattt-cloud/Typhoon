@@ -159,8 +159,6 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Customer
                 return new PaymentResult { Success = false, ErrorMessage = "Mã nhân viên không tồn tại." };
             }
 
-            // Le tan truc tiep thu tien tai quay -> ghi nhan "success" ngay, khong qua
-            // trang thai "pending" (khac voi khach tu tao qua app).
             var payment = new Payment
             {
                 BookingId = bookingId,

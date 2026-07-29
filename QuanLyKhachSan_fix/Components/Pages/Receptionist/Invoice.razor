@@ -6,7 +6,6 @@
 @using InvoiceModel = QuanLyKhachSan_fix.Models.Invoice
 
 <h3>Xuất hóa đơn</h3>
-<p class="text-muted">Chỉ hiển thị các đơn đã <strong>Trả phòng (checked_out)</strong> và chưa có hóa đơn — bước cuối trong luồng Trả phòng → Xuất hóa đơn.</p>
 
 <div class="card p-3 mb-3">
     <p class="text-muted mb-0">Nhân viên thực hiện: @(CurrentUserState.CurrentUser?.FullName ?? "Chưa đăng nhập")</p>
