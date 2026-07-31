@@ -4,10 +4,9 @@
 @inject QuanLyKhachSan_fix.Services.Interfaces.Customer.IPaymentService PaymentService
 @inject QuanLyKhachSan_fix.Services.Interfaces.Receptionist.IInvoiceService InvoiceService
 @inject QuanLyKhachSan_fix.Services.CurrentUserState CurrentUserState
-@inject CurrentUserState UserState
-@inject NavigationManager NavigationManager
-<AuthorizeRole Roles="receptionist">
+
 <h3>Nhận phòng</h3>
+<p class="text-muted">Khách cần trả trước tối thiểu <strong>50% tiền phòng</strong> mới được nhận phòng. Phần còn lại (nếu có) và phụ phí phát sinh sẽ thu khi trả phòng.</p>
 
 <div class="card p-3 mb-3">
     <div class="row g-2 align-items-end">
@@ -33,27 +32,83 @@
     }
 </div>
 
-@if (payingBookingDetailId != null)
+@if (confirmingBookingDetailId != null && confirmingPreview != null)
 {
     <div class="card p-3 mb-3 border-primary">
-        <h5 class="mb-2">Thu tiền & xuất hóa đơn tạm ứng - @payingBookingCode</h5>
-        <p class="mb-2">Số tiền cần thu: <strong>@payingAmount.ToString("N0") đ</strong></p>
+        <h5 class="mb-3">Xác nhận nhận phòng - @confirmingPreview.BookingCode</h5>
 
-        <div class="row g-2 align-items-end">
+        <h6>Thông tin khách hàng</h6>
+        <p class="mb-1">Họ tên: <strong>@(confirmingPreview.CustomerFullName ?? "-")</strong></p>
+        <p class="mb-1">Tài khoản: @(confirmingPreview.CustomerUsername ?? "-")</p>
+        <p class="mb-1">Điện thoại: @(confirmingPreview.CustomerPhone ?? "-")</p>
+        <p class="mb-3">Email: @(confirmingPreview.CustomerEmail ?? "-")</p>
+
+        <h6>Thời gian lưu trú</h6>
+        <p class="mb-3">
+            Từ <strong>@confirmingPreview.CheckInDate.ToString("dd/MM/yyyy")</strong>
+            đến <strong>@confirmingPreview.CheckOutDate.ToString("dd/MM/yyyy")</strong>
+            (<strong>@confirmingPreview.Nights đêm</strong>)
+        </p>
+
+        <h6>Phòng đã đặt</h6>
+        <table class="table table-sm mb-3">
+            <thead>
+                <tr>
+                    <th>Phòng</th>
+                    <th>Loại phòng</th>
+                    <th>Số khách</th>
+                    <th>Đơn giá / đêm</th>
+                    <th>Số đêm</th>
+                    <th>Thành tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var room in confirmingPreview.Rooms)
+                {
+                    <tr>
+                        <td>@room.RoomNumber</td>
+                        <td>@room.RoomTypeName</td>
+                        <td>@(room.GuestCount?.ToString() ?? "-")</td>
+                        <td>@room.Price.ToString("N0") đ</td>
+                        <td>@confirmingPreview.Nights</td>
+                        <td>@((room.Price * confirmingPreview.Nights).ToString("N0")) đ</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <p class="mb-1">Tổng tiền phòng (@confirmingPreview.Nights đêm): <strong>@confirmingPreview.TotalAmount.ToString("N0") đ</strong></p>
+        <p class="mb-1">Đã thanh toán trước: <strong>@confirmingPreview.PaidAmount.ToString("N0") đ</strong></p>
+
+        @if (confirmingNeedsPayment)
+        {
+            <p class="mb-2 text-danger">Cần thu tối thiểu để đạt 50%: <strong>@confirmingMinNeeded.ToString("N0") đ</strong> (có thể thu nhiều hơn, kể cả đủ 100%)</p>
+
+            <div class="row g-2 align-items-end mb-2">
+                <div class="col-md-4">
+                    <label class="form-label">Số tiền thu</label>
+                    <input class="form-control" type="number" min="0" step="1000" @bind="confirmingPayAmount" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Hình thức</label>
+                    <select class="form-select" @bind="confirmingPayMethod">
+                        <option value="cash">Tiền mặt</option>
+                        <option value="online">Online (đã thu qua cổng)</option>
+                    </select>
+                </div>
+            </div>
+        }
+        else
+        {
+            <p class="mb-2 text-success">Đã đạt điều kiện tối thiểu 50% - không cần thu thêm để nhận phòng.</p>
+        }
+
+        <div class="row g-2">
             <div class="col-md-4">
-                <label class="form-label">Hình thức</label>
-                <select class="form-select" @bind="payingMethod">
-                    <option value="cash">Tiền mặt</option>
-                    <option value="online">Online (đã thu qua cổng)</option>
-                </select>
+                <button class="btn btn-success w-100" @onclick="HandleConfirmCheckInClick">Xác nhận nhận phòng</button>
             </div>
             <div class="col-md-4">
-                <button class="btn btn-success w-100" @onclick="HandleCollectPaymentAndCheckInClick">
-                    Thu tiền, xuất hóa đơn & nhận phòng
-                </button>
-            </div>
-            <div class="col-md-4">
-                <button class="btn btn-outline-secondary w-100" @onclick="HandleCancelPayingPanel">Hủy</button>
+                <button class="btn btn-outline-secondary w-100" @onclick="HandleCancelConfirmPanel">Hủy</button>
             </div>
         </div>
     </div>
@@ -78,7 +133,8 @@ else
                 <th>Loại phòng</th>
                 <th>Nhận phòng</th>
                 <th>Trả phòng</th>
-                <th>Trạng thái đơn</th>
+                <th>Số đêm</th>
+                <th>Đã thanh toán</th>
                 <th></th>
             </tr>
         </thead>
@@ -92,14 +148,23 @@ else
                     <td>@bd.Room.RoomType.Name</td>
                     <td>@bd.Booking.CheckInDate.ToString("dd/MM/yyyy")</td>
                     <td>@bd.Booking.CheckOutDate.ToString("dd/MM/yyyy")</td>
+                    <td>@Math.Max(1, (bd.Booking.CheckOutDate.Date - bd.Booking.CheckInDate.Date).Days)</td>
                     <td>
-                        @if (bd.Booking.Status == "confirmed")
+                        @{
+                            var (total, paid) = paymentInfo.TryGetValue(bd.Booking.Id, out var info) ? info : (0m, 0m);
+                            var percent = total > 0 ? (int)Math.Round(paid / total * 100) : 0;
+                        }
+                        @if (percent >= 100)
                         {
-                            <span class="badge bg-primary">Đã thanh toán trước</span>
+                            <span class="badge bg-success">Đã trả đủ 100% (@total.ToString("N0") đ)</span>
+                        }
+                        else if (percent >= 50)
+                        {
+                            <span class="badge bg-primary">Đã trả @(percent)% / @total.ToString("N0") đ</span>
                         }
                         else
                         {
-                            <span class="badge bg-warning text-dark">Chưa thanh toán</span>
+                            <span class="badge bg-warning text-dark">Mới trả @(percent)% / @total.ToString("N0") đ (cần ≥ 50%)</span>
                         }
                     </td>
                     <td>
@@ -110,24 +175,25 @@ else
         </tbody>
     </table>
 }
-</AuthorizeRole>
+
 @code {
     private bool loading = true;
     private List<QuanLyKhachSan_fix.Models.BookingDetail> bookingDetails = new();
+    private Dictionary<int, (decimal Total, decimal Paid)> paymentInfo = new();
     private string searchBookingCode = "";
     private string errorMessage = "";
     private string infoMessage = "";
 
-    private int? payingBookingDetailId;
-    private int payingBookingId;
-    private string payingBookingCode = "";
-    private decimal payingAmount;
-    private string payingMethod = "cash";
+    private int? confirmingBookingDetailId;
+    private int confirmingBookingId;
+    private QuanLyKhachSan_fix.Services.Interfaces.Receptionist.InvoicePreview? confirmingPreview;
+    private decimal confirmingMinNeeded;
+    private bool confirmingNeedsPayment;
+    private decimal confirmingPayAmount;
+    private string confirmingPayMethod = "cash";
 
     protected override async Task OnInitializedAsync()
     {
-        if (!AccessGuard.Ensure(UserState, NavigationManager, "receptionist"))
-            return;
         await LoadTodayArrivalsAsync();
     }
 
@@ -135,7 +201,19 @@ else
     {
         loading = true;
         bookingDetails = await CheckInOutService.GetTodayArrivalsAsync();
+        await LoadPaymentInfoAsync();
         loading = false;
+    }
+
+    private async Task LoadPaymentInfoAsync()
+    {
+        paymentInfo = new Dictionary<int, (decimal, decimal)>();
+        foreach (var bookingId in bookingDetails.Select(bd => bd.Booking.Id).Distinct())
+        {
+            var total = await PaymentService.GetRoomAmountAsync(bookingId);
+            var paid = await PaymentService.GetPaidAmountAsync(bookingId);
+            paymentInfo[bookingId] = (total, paid);
+        }
     }
 
     private async Task HandleShowTodayClick()
@@ -151,6 +229,7 @@ else
         bookingDetails = string.IsNullOrWhiteSpace(searchBookingCode)
             ? await CheckInOutService.GetTodayArrivalsAsync()
             : await CheckInOutService.SearchReservedByBookingCodeAsync(searchBookingCode);
+        await LoadPaymentInfoAsync();
         loading = false;
     }
 
@@ -159,51 +238,29 @@ else
         errorMessage = "";
         infoMessage = "";
 
-        decimal outstanding = await PaymentService.GetOutstandingAmountAsync(bd.Booking.Id);
+        confirmingPreview = await InvoiceService.GetInvoicePreviewAsync(bd.Booking.Id);
+        decimal minRequired = confirmingPreview.TotalAmount * 0.5m;
 
-        if (outstanding <= 0)
-        {
-            await FinishCheckInAsync(bd.Id, bd.Booking.Id, bd.Booking.BookingCode, alreadyPaidElsewhere: true);
-            return;
-        }
+        confirmingNeedsPayment = confirmingPreview.PaidAmount < minRequired;
+        confirmingMinNeeded = confirmingNeedsPayment ? minRequired - confirmingPreview.PaidAmount : 0;
+        confirmingPayAmount = confirmingMinNeeded;
+        confirmingPayMethod = "cash";
 
-        payingBookingDetailId = bd.Id;
-        payingBookingId = bd.Booking.Id;
-        payingBookingCode = bd.Booking.BookingCode ?? $"#{bd.Booking.Id}";
-        payingAmount = outstanding;
-        payingMethod = "cash";
+        confirmingBookingDetailId = bd.Id;
+        confirmingBookingId = bd.Booking.Id;
     }
 
-    private void HandleCancelPayingPanel()
+    private void HandleCancelConfirmPanel()
     {
-        payingBookingDetailId = null;
+        confirmingBookingDetailId = null;
+        confirmingPreview = null;
     }
 
-    private async Task HandleCollectPaymentAndCheckInClick()
+    private async Task HandleConfirmCheckInClick()
     {
-        if (payingBookingDetailId == null) return;
-
-        var staffId = CurrentUserState.CurrentUser?.Id;
-        if (staffId == null || staffId <= 0)
-        {
-            errorMessage = "Bạn cần đăng nhập trước khi thực hiện thao tác này.";
-            return;
-        }
+        if (confirmingBookingDetailId == null || confirmingPreview == null) return;
 
         errorMessage = "";
-
-        var paymentResult = await PaymentService.CreateStaffCollectedPaymentAsync(payingBookingId, payingAmount, payingMethod, staffId.Value);
-        if (!paymentResult.Success)
-        {
-            errorMessage = paymentResult.ErrorMessage ?? "";
-            return;
-        }
-
-        await FinishCheckInAsync(payingBookingDetailId.Value, payingBookingId, payingBookingCode, alreadyPaidElsewhere: false);
-    }
-
-    private async Task FinishCheckInAsync(int bookingDetailId, int bookingId, string? bookingCode, bool alreadyPaidElsewhere)
-    {
         var staffId = CurrentUserState.CurrentUser?.Id;
         if (staffId == null || staffId <= 0)
         {
@@ -211,21 +268,39 @@ else
             return;
         }
 
-        var checkInResult = await CheckInOutService.CheckInAsync(bookingDetailId, staffId.Value);
+        if (confirmingNeedsPayment)
+        {
+            if (confirmingPreview.PaidAmount + confirmingPayAmount < confirmingPreview.TotalAmount * 0.5m)
+            {
+                errorMessage = $"Số tiền thu chưa đạt tối thiểu 50% tiền phòng (cần thu ít nhất {confirmingMinNeeded.ToString("N0")} đ).";
+                return;
+            }
+
+            var paymentResult = await PaymentService.CreateStaffCollectedPaymentAsync(confirmingBookingId, confirmingPayAmount, confirmingPayMethod, staffId.Value);
+            if (!paymentResult.Success)
+            {
+                errorMessage = paymentResult.ErrorMessage ?? "";
+                return;
+            }
+        }
+
+        var checkInResult = await CheckInOutService.CheckInAsync(confirmingBookingDetailId.Value, staffId.Value);
         if (!checkInResult.Success)
         {
             errorMessage = checkInResult.ErrorMessage ?? "";
             return;
         }
-        var invoiceResult = await InvoiceService.CreateInvoiceAsync(bookingId, staffId.Value);
-        if (!invoiceResult.Success && invoiceResult.ErrorMessage != "Đơn đặt phòng này không còn khoản nào cần xuất hóa đơn.")
+
+        var invoiceResult = await InvoiceService.CreateCheckInInvoiceAsync(confirmingBookingId, staffId.Value);
+        if (!invoiceResult.Success)
         {
             errorMessage = invoiceResult.ErrorMessage ?? "";
             return;
         }
 
-        payingBookingDetailId = null;
-        infoMessage = $"Đã nhận phòng cho {bookingCode}" + (alreadyPaidElsewhere ? "." : ", đã thu tiền và xuất hóa đơn tạm ứng.");
+        infoMessage = $"Đã nhận phòng cho {confirmingPreview.BookingCode} và xuất hóa đơn nhận phòng.";
+        confirmingBookingDetailId = null;
+        confirmingPreview = null;
         await HandleSearchClick();
     }
 }

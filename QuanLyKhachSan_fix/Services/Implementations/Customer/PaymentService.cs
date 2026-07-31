@@ -95,6 +95,31 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Customer
             return outstanding < 0 ? 0 : outstanding;
         }
 
+        // SUA: RoomAmount = Booking.TotalAmount, KHONG tu tinh lai tu BookingDetail.Price
+        // (truoc day cong thang BookingDetail.Price la SAI vi cot nay chi luu gia 1 DEM,
+        // khong nhan so dem o - khien don nhieu dem bi hien thieu tien). Booking.TotalAmount
+        // da duoc tinh dung dem x gia tu luc tao don (BookingService.CreateBookingAsync)
+        // va duoc cong dung khi duyet gia han/doi phong (BookingEditRequestService), nen
+        // dung truc tiep la chinh xac nhat, khong can tinh lai.
+        public async Task<decimal> GetRoomAmountAsync(int bookingId)
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var booking = await db.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
+            return booking?.TotalAmount ?? 0;
+        }
+
+        public async Task<decimal> GetPaidAmountAsync(int bookingId)
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            decimal paid = await db.Payments
+                .Where(p => p.BookingId == bookingId && p.PaymentStatus == "success")
+                .SumAsync(p => (decimal?)p.Amount) ?? 0;
+
+            return paid;
+        }
+
         public async Task<PaymentResult> ConfirmCashPaymentAsync(int paymentId, int staffId)
         {
             await using var db = await _dbFactory.CreateDbContextAsync();

@@ -103,11 +103,6 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
             if (detail.Status != "reserved")
                 return new CheckInOutResult { Success = false, ErrorMessage = "Phòng này không ở trạng thái chờ nhận phòng." };
 
-            // SUA: bo yeu cau Booking.Status phai "confirmed". Theo luong moi, thanh toan
-            // dien ra NGAY LUC nhan phong (le tan thu tien qua CreateStaffCollectedPaymentAsync
-            // truoc khi goi CheckInAsync nay) - nen luc goi ham nay Booking co the van con
-            // "pending" cho toi khi thu tien xong. Viec bat buoc da thu du tien duoc kiem
-            // tra rieng o UI (CheckIn.razor) truoc khi cho phep bam "Nhan phong".
 
             var staffExists = await db.Users.AnyAsync(u => u.Id == staffId);
             if (!staffExists)

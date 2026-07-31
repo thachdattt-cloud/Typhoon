@@ -10,15 +10,12 @@ using System.Threading.Tasks;
 
 namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
 {
-    // SUA THEO PHUONG AN MOI: "Dat phong truoc, thanh toan sau"
-    // - Nhan phong (check-in): le tan thu tien phong da dat (CreateStaffCollectedPaymentAsync)
-    //   VA xuat 1 hoa don "tam ung" ngay luc do (khong con doi den luc tra phong).
-    // - Trong luc luu tru: neu co yeu cau gia han/doi phong duoc duyet, Booking.TotalAmount
-    //   tang len (xem BookingEditRequestService.ApproveRequestAsync).
-    // - Tra phong (check-out): neu TotalAmount da tang so voi da thu, phai thanh toan phan
-    //   chenh lech (CheckInOutService.CheckOutAsync da chan tra phong neu con no - khong doi),
-    //   roi xuat them 1 hoa don "bo sung" cho phan phat sinh do.
-    // => 1 booking co the co NHIEU Invoice (truoc day gioi han toi da 1 hoa don/booking).
+    // SUA (lan 2): phat hien loi tinh "tien phong" bang cach cong thang BookingDetail.Price -
+    // cot nay CHI luu gia 1 DEM (xem BookingService.CreateBookingAsync), khong nhan so dem o,
+    // nen don nhieu dem bi hien thieu tien. Booking.TotalAmount moi la nguon dung: da tinh
+    // dung dem x gia luc tao don, va duoc cong dung phu phi khi duyet gia han/doi phong
+    // (BookingEditRequestService.ApproveRequestAsync). Tu day ve sau dung truc tiep
+    // Booking.TotalAmount + tong ExtraFee cac yeu cau da duyet, KHONG tu tinh lai tu Price.
     public class InvoiceService : IInvoiceService
     {
         private readonly IDbContextFactory<AppDbContext> _dbFactory;
@@ -34,27 +31,19 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
         {
             await using var db = await _dbFactory.CreateDbContextAsync();
 
-            // SUA: truoc day chi liet ke booking "checked_out" VA chua co hoa don nao ca.
-            // Gio can liet ke ca booking "checked_in" (de xuat hoa don tam ung), va van
-            // liet ke "checked_out" neu con phan chua xuat hoa don (bo sung) - vi 1 booking
-            // co the da co 1 hoa don tam ung roi nhung van con phan phat sinh chua xuat.
             var candidates = await db.Bookings
                 .Include(b => b.Customer)
                 .Include(b => b.BookingDetails).ThenInclude(bd => bd.Room)
                 .Include(b => b.Invoices)
-                .Where(b => b.Status == "checked_in" || b.Status == "checked_out")
+                .Where(b => b.Status == "checked_out")
                 .OrderBy(b => b.CheckOutDate)
                 .ToListAsync();
 
             var result = new List<Booking>();
             foreach (var booking in candidates)
             {
-                decimal remaining = await CalculateTotalAmountAsync(booking.Id);
-                decimal outstanding = await _paymentService.GetOutstandingAmountAsync(booking.Id);
-
-                // Chi hien booking da THU DU TIEN cho phan con lai (outstanding == 0)
-                // va con phan CHUA XUAT HOA DON (remaining > 0) - san sang xuat ngay.
-                if (remaining > 0 && outstanding == 0)
+                decimal remaining = await CalculateExtraFeeAsync(booking.Id);
+                if (remaining > 0)
                 {
                     result.Add(booking);
                 }
@@ -74,48 +63,136 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
                 .ToListAsync();
         }
 
-        public async Task<decimal> CalculateTotalAmountAsync(int bookingId)
+        // So tien CHUA duoc xuat hoa don (tinh theo so sach: TotalAmount hien tai - tong cac
+        // Invoice da xuat). Dung cach nay (thay vi tu suy ra "phu phi") vi no LUON dung bat ke
+        // booking da co bao nhieu lan gia han/doi phong hay hoa don truoc do da xuat dung/sai.
+        public async Task<decimal> CalculateExtraFeeAsync(int bookingId)
         {
             await using var db = await _dbFactory.CreateDbContextAsync();
 
-            var booking = await db.Bookings
-                .Include(b => b.BookingDetails)
-                .Include(b => b.Invoices)
-                .FirstOrDefaultAsync(b => b.Id == bookingId);
-
+            var booking = await db.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
             if (booking == null) return 0;
 
-            decimal bookingTotal = booking.TotalAmount.HasValue && booking.TotalAmount.Value > 0
-                ? booking.TotalAmount.Value
-                : booking.BookingDetails.Sum(bd => bd.Price);
+            decimal totalAmount = booking.TotalAmount ?? 0;
 
-            // SUA: tra ve phan CHUA duoc xuat hoa don = tong hien tai cua booking - tong
-            // cac hoa don da xuat truoc do (tam ung luc check-in, neu co). Truoc day ham
-            // nay luon tra ve toan bo TotalAmount, khien lan xuat hoa don thu 2 (bo sung)
-            // se tinh trung tien voi lan dau.
-            decimal alreadyInvoiced = booking.Invoices.Sum(i => i.TotalAmount ?? 0);
-            decimal remaining = bookingTotal - alreadyInvoiced;
+            decimal alreadyInvoiced = await db.Invoices
+                .Where(i => i.BookingId == bookingId)
+                .SumAsync(i => (decimal?)i.TotalAmount) ?? 0;
 
+            decimal remaining = totalAmount - alreadyInvoiced;
             return remaining < 0 ? 0 : remaining;
         }
 
-        public async Task<InvoiceResult> CreateInvoiceAsync(int bookingId, int issuedByUserId)
+        public async Task<InvoicePreview> GetInvoicePreviewAsync(int bookingId)
         {
             await using var db = await _dbFactory.CreateDbContextAsync();
 
             var booking = await db.Bookings
-                .Include(b => b.BookingDetails)
+                .Include(b => b.Customer)
+                .Include(b => b.BookingDetails).ThenInclude(bd => bd.Room).ThenInclude(r => r.RoomType)
+                .FirstOrDefaultAsync(b => b.Id == bookingId);
+
+            var preview = new InvoicePreview { BookingId = bookingId };
+            if (booking == null) return preview;
+
+            preview.BookingCode = booking.BookingCode;
+            preview.CustomerFullName = booking.Customer?.FullName;
+            preview.CustomerUsername = booking.Customer?.Username;
+            preview.CustomerPhone = booking.Customer?.Phone;
+            preview.CustomerEmail = booking.Customer?.Email;
+
+            preview.CheckInDate = booking.CheckInDate;
+            preview.CheckOutDate = booking.CheckOutDate;
+            preview.Nights = Math.Max(1, (booking.CheckOutDate.Date - booking.CheckInDate.Date).Days);
+
+            preview.Rooms = booking.BookingDetails.Select(bd => new InvoicePreviewRoom
+            {
+                RoomNumber = bd.Room.RoomNumber,
+                RoomTypeName = bd.Room.RoomType.Name,
+                Price = bd.Price,
+                GuestCount = bd.GuestCount
+            }).ToList();
+
+            var editRequests = await db.BookingEditRequests
+                .Include(r => r.OldRoom)
+                .Include(r => r.NewRoom)
+                .Where(r => r.BookingDetail.BookingId == bookingId && r.Status == "approved")
+                .OrderBy(r => r.HandledAt)
+                .ToListAsync();
+
+            preview.ExtraServices = editRequests.Select(r => new InvoicePreviewService
+            {
+                RequestType = r.RequestType ?? "",
+                Description = r.RequestType == "extend"
+                    ? $"Gia hạn trả phòng đến {r.NewCheckOutDate?.ToString("dd/MM/yyyy")}"
+                    : $"Đổi phòng {r.OldRoom?.RoomNumber ?? "?"} → {r.NewRoom?.RoomNumber ?? "?"}",
+                ExtraFee = r.ExtraFee ?? 0,
+                HandledAt = r.HandledAt
+            }).ToList();
+
+            preview.TotalAmount = booking.TotalAmount ?? 0;
+            preview.ExtraFeeAmount = preview.ExtraServices.Sum(s => s.ExtraFee);
+            preview.OriginalAmount = preview.TotalAmount - preview.ExtraFeeAmount;
+            if (preview.OriginalAmount < 0) preview.OriginalAmount = 0;
+
+            preview.PaidAmount = await _paymentService.GetPaidAmountAsync(bookingId);
+            preview.OutstandingAmount = preview.TotalAmount - preview.PaidAmount;
+            if (preview.OutstandingAmount < 0) preview.OutstandingAmount = 0;
+
+            return preview;
+        }
+
+        public async Task<InvoiceResult> CreateCheckInInvoiceAsync(int bookingId, int issuedByUserId)
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var booking = await db.Bookings
                 .Include(b => b.Invoices)
                 .FirstOrDefaultAsync(b => b.Id == bookingId);
 
             if (booking == null)
                 return new InvoiceResult { Success = false, ErrorMessage = "Không tìm thấy đơn đặt phòng." };
 
-            // SUA: truoc day chi cho xuat hoa don khi da "checked_out". Gio cho phep xuat
-            // ngay tu luc "checked_in" (hoa don tam ung luc nhan phong), va van cho phep
-            // luc "checked_out" (hoa don bo sung neu co phat sinh).
-            if (booking.Status != "checked_in" && booking.Status != "checked_out")
-                return new InvoiceResult { Success = false, ErrorMessage = "Chỉ có thể xuất hóa đơn sau khi khách đã nhận phòng." };
+            // Da co hoa don nhan phong roi (vi du: phong thu 2 trong cung 1 booking moi check-in)
+            // => khong tao trung, coi nhu thanh cong (khong can bao loi ra UI).
+            if (booking.Invoices.Any())
+                return new InvoiceResult { Success = true, Invoice = null };
+
+            var issuerExists = await db.Users.AnyAsync(u => u.Id == issuedByUserId);
+            if (!issuerExists)
+                return new InvoiceResult { Success = false, ErrorMessage = "Mã nhân viên không tồn tại." };
+
+            // SUA: dung thang Booking.TotalAmount (da tinh dung dem x gia), KHONG cong
+            // BookingDetail.Price (chi la gia 1 dem, thieu tien voi don nhieu dem).
+            decimal roomAmount = booking.TotalAmount ?? 0;
+            if (roomAmount <= 0)
+                return new InvoiceResult { Success = false, ErrorMessage = "Không xác định được tiền phòng để xuất hóa đơn." };
+
+            var invoice = new Invoice
+            {
+                BookingId = booking.Id,
+                TotalAmount = roomAmount,
+                IssuedBy = issuedByUserId,
+                IssuedAt = DateTime.Now
+            };
+
+            db.Invoices.Add(invoice);
+            await db.SaveChangesAsync();
+
+            return new InvoiceResult { Success = true, Invoice = invoice };
+        }
+
+        public async Task<InvoiceResult> CreateInvoiceAsync(int bookingId, int issuedByUserId)
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var booking = await db.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
+
+            if (booking == null)
+                return new InvoiceResult { Success = false, ErrorMessage = "Không tìm thấy đơn đặt phòng." };
+
+            if (booking.Status != "checked_out")
+                return new InvoiceResult { Success = false, ErrorMessage = "Chỉ có thể xuất hóa đơn phụ phí sau khi khách đã trả phòng." };
 
             var issuerExists = await db.Users.AnyAsync(u => u.Id == issuedByUserId);
             if (!issuerExists)
@@ -127,17 +204,13 @@ namespace QuanLyKhachSan_fix.Services.Implementations.Receptionist
                 return new InvoiceResult
                 {
                     Success = false,
-                    ErrorMessage = $"Khách còn nợ {outstanding:N0} đ. Vui lòng thu tiền (CreateStaffCollectedPaymentAsync / ConfirmCashPaymentAsync) trước khi xuất hóa đơn."
+                    ErrorMessage = $"Khách còn nợ {outstanding:N0} đ. Vui lòng thu tiền trước khi xuất hóa đơn."
                 };
             }
 
-            // SUA: khong con chan "da co hoa don" - 1 booking duoc phep co nhieu hoa don
-            // (tam ung + bo sung). Thay vao do chan khi khong con gi de xuat (remaining == 0).
-            decimal remaining = await CalculateTotalAmountAsync(bookingId);
+            decimal remaining = await CalculateExtraFeeAsync(bookingId);
             if (remaining <= 0)
-            {
-                return new InvoiceResult { Success = false, ErrorMessage = "Đơn đặt phòng này không còn khoản nào cần xuất hóa đơn." };
-            }
+                return new InvoiceResult { Success = false, ErrorMessage = "Không có phụ phí phát sinh, không cần xuất thêm hóa đơn." };
 
             var invoice = new Invoice
             {

@@ -2,9 +2,6 @@
 using QuanLyKhachSan_fix.Data;
 using QuanLyKhachSan_fix.Models;
 using QuanLyKhachSan_fix.Services.Security;
-using QuanLyKhachSan_fix.Data;
-using QuanLyKhachSan_fix.Models;
-using QuanLyKhachSan_fix.Services.Security;
 using System;
 using System.Threading.Tasks;
 using QuanLyKhachSan_fix.Services.Interfaces.Manager;
