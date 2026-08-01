@@ -56,7 +56,7 @@
 @if (previewBookingId != null && preview != null)
 {
     <div class="card p-3 mb-3 border-primary">
-        <h5 class="mb-3">Xem trước hóa đơn phụ phí - @preview.BookingCode</h5>
+        <h5 class="mb-3">Xem trước hóa đơn - @preview.BookingCode</h5>
 
         <h6>Thông tin khách hàng</h6>
         <p class="mb-1">Họ tên: <strong>@(preview.CustomerFullName ?? "-")</strong></p>
@@ -94,18 +94,18 @@
             </tbody>
         </table>
 
-        <h6>Chi tiết yêu cầu</h6>
+        <h6>Dịch vụ đã sử dụng</h6>
         <table class="table table-sm mb-3">
             <thead>
                 <tr>
-                    <th>Yêu cầu</th>
+                    <th>Nội dung</th>
                     <th>Ngày</th>
                     <th>Số tiền</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>Yêu cầu đặt phòng ban đầu (đã xuất hóa đơn lúc nhận phòng)</td>
+                    <td>Đặt phòng ban đầu</td>
                     <td>@preview.CheckInDate.ToString("dd/MM/yyyy")</td>
                     <td>@preview.OriginalAmount.ToString("N0") đ</td>
                 </tr>
@@ -114,13 +114,14 @@
                     <tr>
                         <td>@s.Description</td>
                         <td>@(s.HandledAt?.ToString("dd/MM/yyyy") ?? "-")</td>
-                        <td>@s.ExtraFee.ToString("N0") đ (phụ phí)</td>
+                        <td>@s.ExtraFee.ToString("N0") đ</td>
                     </tr>
                 }
             </tbody>
         </table>
 
-        <p class="mb-3">Tổng phụ phí sẽ xuất hóa đơn: <strong>@preview.ExtraFeeAmount.ToString("N0") đ</strong></p>
+        <p class="mb-1">Tổng tiền hóa đơn: <strong>@preview.TotalAmount.ToString("N0") đ</strong></p>
+        <p class="mb-3">Đã thanh toán: <strong>@preview.PaidAmount.ToString("N0") đ</strong></p>
 
         <div class="row g-2">
             <div class="col-md-4">
@@ -133,15 +134,15 @@
     </div>
 }
 
-<h5>Đơn có phụ phí phát sinh, chờ xuất hóa đơn bổ sung</h5>
-<p class="text-muted">Tiền phòng đã được xuất hóa đơn ngay lúc nhận phòng — mục này chỉ dành cho phụ phí (gia hạn/đổi phòng phát sinh trong kỳ lưu trú).</p>
+<h5>Đơn chờ xuất hóa đơn</h5>
+<p class="text-muted">Tất cả đơn đã trả phòng nhưng chưa có hóa đơn, gồm cả đơn không phát sinh phụ phí.</p>
 @if (loading)
 {
     <p>Đang tải...</p>
 }
 else if (!pendingBookings.Any())
 {
-    <p>Không có đơn nào chờ xuất hóa đơn phụ phí.</p>
+    <p>Không có đơn nào chờ xuất hóa đơn.</p>
 }
 else
 {
@@ -152,7 +153,7 @@ else
                 <th>Khách hàng</th>
                 <th>Số phòng đã ở</th>
                 <th>Trạng thái đơn</th>
-                <th>Phụ phí</th>
+                <th>Tổng tiền</th>
                 <th></th>
             </tr>
         </thead>
@@ -164,7 +165,7 @@ else
                     <td>@booking.Customer.FullName</td>
                     <td>@booking.BookingDetails.Count</td>
                     <td><span class="badge bg-secondary">Đã trả phòng</span></td>
-                    <td>@pendingExtraFees[booking.Id].ToString("N0") đ</td>
+                    <td>@booking.TotalAmount?.ToString("N0") đ</td>
                     <td>
                         <button class="btn btn-sm btn-outline-primary" @onclick="() => HandleOpenPreviewClick(booking.Id)">Xem trước</button>
                     </td>
@@ -187,9 +188,7 @@ else
                 <th>Mã hóa đơn</th>
                 <th>Mã đặt phòng</th>
                 <th>Khách hàng</th>
-                <th>Loại hóa đơn</th>
                 <th>Tổng tiền</th>
-                <th>Đã trả / Còn thiếu (tiền phòng)</th>
                 <th>Ngày xuất</th>
                 <th>Người xuất</th>
             </tr>
@@ -201,35 +200,7 @@ else
                     <td>@inv.Id</td>
                     <td>@inv.Booking.BookingCode</td>
                     <td>@inv.Booking.Customer.FullName</td>
-                    <td>
-                        @if (checkInInvoiceIds.Contains(inv.Id))
-                        {
-                            <span class="badge bg-primary">Nhận phòng (tiền phòng)</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-info text-dark">Trả phòng (phụ phí)</span>
-                        }
-                    </td>
                     <td>@inv.TotalAmount?.ToString("N0") đ</td>
-                    <td>
-                        @if (checkInInvoiceIds.Contains(inv.Id) && paidVsOwing.TryGetValue(inv.Id, out var breakdown))
-                        {
-                            <span>Đã trả: @breakdown.Paid.ToString("N0") đ</span><br />
-                            @if (breakdown.Owing > 0)
-                            {
-                                <span class="text-danger">Còn thiếu: @breakdown.Owing.ToString("N0") đ</span>
-                            }
-                            else
-                            {
-                                <span class="text-success">Đã trả đủ</span>
-                            }
-                        }
-                        else
-                        {
-                            <span>-</span>
-                        }
-                    </td>
                     <td>@inv.IssuedAt.ToString("dd/MM/yyyy HH:mm")</td>
                     <td>@inv.IssuedByUser?.FullName</td>
                 </tr>
@@ -241,10 +212,7 @@ else
 @code {
     private bool loading = true;
     private List<Booking> pendingBookings = new();
-    private Dictionary<int, decimal> pendingExtraFees = new();
     private List<InvoiceModel> invoices = new();
-    private HashSet<int> checkInInvoiceIds = new();
-    private Dictionary<int, (decimal Paid, decimal Owing)> paidVsOwing = new();
     private string errorMessage = "";
 
     private int? pendingBookingId;
@@ -277,29 +245,6 @@ else
         loading = true;
         pendingBookings = await InvoiceService.GetBookingsReadyForInvoiceAsync();
         invoices = await InvoiceService.GetAllInvoicesAsync();
-
-        pendingExtraFees = new Dictionary<int, decimal>();
-        foreach (var booking in pendingBookings)
-        {
-            pendingExtraFees[booking.Id] = await InvoiceService.CalculateExtraFeeAsync(booking.Id);
-        }
-
-        // Hoa don DAU TIEN (theo IssuedAt) cua moi booking la hoa don nhan phong (tien phong).
-        checkInInvoiceIds = invoices
-            .GroupBy(i => i.BookingId)
-            .Select(g => g.OrderBy(i => i.IssuedAt).First().Id)
-            .ToHashSet();
-
-        paidVsOwing = new Dictionary<int, (decimal, decimal)>();
-        foreach (var inv in invoices.Where(i => checkInInvoiceIds.Contains(i.Id)))
-        {
-            decimal roomAmount = inv.TotalAmount ?? 0;
-            decimal totalPaid = await PaymentService.GetPaidAmountAsync(inv.BookingId);
-            decimal paidTowardRoom = Math.Min(totalPaid, roomAmount);
-            decimal owing = roomAmount - paidTowardRoom;
-            paidVsOwing[inv.Id] = (paidTowardRoom, owing < 0 ? 0 : owing);
-        }
-
         loading = false;
     }
 

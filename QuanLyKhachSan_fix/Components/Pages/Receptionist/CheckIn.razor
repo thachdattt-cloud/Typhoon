@@ -6,7 +6,7 @@
 @inject QuanLyKhachSan_fix.Services.CurrentUserState CurrentUserState
 
 <h3>Nhận phòng</h3>
-<p class="text-muted">Khách cần trả trước tối thiểu <strong>50% tiền phòng</strong> mới được nhận phòng. Phần còn lại (nếu có) và phụ phí phát sinh sẽ thu khi trả phòng.</p>
+<p class="text-muted">Khách cần trả trước tối thiểu <strong>50% giá phòng 1 đêm</strong> mới được nhận phòng (không phụ thuộc số đêm đặt). Phần còn lại và phụ phí phát sinh sẽ thu khi trả phòng.</p>
 
 <div class="card p-3 mb-3">
     <div class="row g-2 align-items-end">
@@ -78,11 +78,12 @@
         </table>
 
         <p class="mb-1">Tổng tiền phòng (@confirmingPreview.Nights đêm): <strong>@confirmingPreview.TotalAmount.ToString("N0") đ</strong></p>
+        <p class="mb-1">Giá phòng 1 đêm (căn cứ tính cọc): <strong>@confirmingOneNightAmount.ToString("N0") đ</strong></p>
         <p class="mb-1">Đã thanh toán trước: <strong>@confirmingPreview.PaidAmount.ToString("N0") đ</strong></p>
 
         @if (confirmingNeedsPayment)
         {
-            <p class="mb-2 text-danger">Cần thu tối thiểu để đạt 50%: <strong>@confirmingMinNeeded.ToString("N0") đ</strong> (có thể thu nhiều hơn, kể cả đủ 100%)</p>
+            <p class="mb-2 text-danger">Cần thu tối thiểu để đạt 50% giá phòng 1 đêm: <strong>@confirmingMinNeeded.ToString("N0") đ</strong> (có thể thu nhiều hơn, kể cả đủ 100% tổng tiền phòng)</p>
 
             <div class="row g-2 align-items-end mb-2">
                 <div class="col-md-4">
@@ -100,7 +101,7 @@
         }
         else
         {
-            <p class="mb-2 text-success">Đã đạt điều kiện tối thiểu 50% - không cần thu thêm để nhận phòng.</p>
+            <p class="mb-2 text-success">Đã đạt điều kiện tối thiểu 50% giá phòng 1 đêm - không cần thu thêm để nhận phòng.</p>
         }
 
         <div class="row g-2">
@@ -188,6 +189,7 @@ else
     private int confirmingBookingId;
     private QuanLyKhachSan_fix.Services.Interfaces.Receptionist.InvoicePreview? confirmingPreview;
     private decimal confirmingMinNeeded;
+    private decimal confirmingOneNightAmount;
     private bool confirmingNeedsPayment;
     private decimal confirmingPayAmount;
     private string confirmingPayMethod = "cash";
@@ -239,7 +241,8 @@ else
         infoMessage = "";
 
         confirmingPreview = await InvoiceService.GetInvoicePreviewAsync(bd.Booking.Id);
-        decimal minRequired = confirmingPreview.TotalAmount * 0.5m;
+        confirmingOneNightAmount = confirmingPreview.Rooms.Sum(r => r.Price);
+        decimal minRequired = confirmingOneNightAmount * 0.5m;
 
         confirmingNeedsPayment = confirmingPreview.PaidAmount < minRequired;
         confirmingMinNeeded = confirmingNeedsPayment ? minRequired - confirmingPreview.PaidAmount : 0;
@@ -270,9 +273,9 @@ else
 
         if (confirmingNeedsPayment)
         {
-            if (confirmingPreview.PaidAmount + confirmingPayAmount < confirmingPreview.TotalAmount * 0.5m)
+            if (confirmingPreview.PaidAmount + confirmingPayAmount < confirmingOneNightAmount * 0.5m)
             {
-                errorMessage = $"Số tiền thu chưa đạt tối thiểu 50% tiền phòng (cần thu ít nhất {confirmingMinNeeded.ToString("N0")} đ).";
+                errorMessage = $"Số tiền thu chưa đạt tối thiểu 50% giá phòng 1 đêm (cần thu ít nhất {confirmingMinNeeded.ToString("N0")} đ).";
                 return;
             }
 
@@ -291,14 +294,7 @@ else
             return;
         }
 
-        var invoiceResult = await InvoiceService.CreateCheckInInvoiceAsync(confirmingBookingId, staffId.Value);
-        if (!invoiceResult.Success)
-        {
-            errorMessage = invoiceResult.ErrorMessage ?? "";
-            return;
-        }
-
-        infoMessage = $"Đã nhận phòng cho {confirmingPreview.BookingCode} và xuất hóa đơn nhận phòng.";
+        infoMessage = $"Đã nhận phòng cho {confirmingPreview.BookingCode}.";
         confirmingBookingDetailId = null;
         confirmingPreview = null;
         await HandleSearchClick();

@@ -41,19 +41,20 @@ namespace QuanLyKhachSan_fix.Services.Interfaces.Receptionist
         public DateTime CheckOutDate { get; set; }
         public int Nights { get; set; }
 
+        // Phong da o
         public List<InvoicePreviewRoom> Rooms { get; set; } = new();
 
-        // Cac yeu cau gia han / doi phong DA DUOC DUYET cho booking nay
+        // Tat ca dich vu / yeu cau gia han - doi phong DA DUOC DUYET trong ky luu tru
         public List<InvoicePreviewService> ExtraServices { get; set; } = new();
 
-        // So tien cua yeu cau DAT PHONG BAN DAU (truoc khi co yeu cau gia han/doi phong nao)
-        // = Booking.TotalAmount hien tai - tong ExtraFee cac yeu cau da duyet
+        // Tien phong ban dau (chua gom dich vu phat sinh) = TotalAmount - tong ExtraFee
         public decimal OriginalAmount { get; set; }
 
-        // Tong phu phi tu cac yeu cau da duyet (= tong ExtraFee)
+        // Tong phi dich vu phat sinh (gia han / doi phong da duyet)
         public decimal ExtraFeeAmount { get; set; }
 
-        // = OriginalAmount + ExtraFeeAmount = Booking.TotalAmount hien tai
+        // = OriginalAmount + ExtraFeeAmount = Booking.TotalAmount hien tai. Day la so tien
+        // hoa don DUY NHAT cua booking se the hien (mot booking = mot hoa don, xuat luc tra phong).
         public decimal TotalAmount { get; set; }
 
         public decimal PaidAmount { get; set; }
@@ -64,9 +65,7 @@ namespace QuanLyKhachSan_fix.Services.Interfaces.Receptionist
     {
         Task<List<Booking>> GetBookingsReadyForInvoiceAsync();
         Task<List<Invoice>> GetAllInvoicesAsync();
-        Task<decimal> CalculateExtraFeeAsync(int bookingId);
         Task<InvoicePreview> GetInvoicePreviewAsync(int bookingId);
-        Task<InvoiceResult> CreateCheckInInvoiceAsync(int bookingId, int issuedByUserId);
         Task<InvoiceResult> CreateInvoiceAsync(int bookingId, int issuedByUserId);
     }
 }

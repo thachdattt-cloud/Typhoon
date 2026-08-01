@@ -6,7 +6,7 @@
 @inject QuanLyKhachSan_fix.Services.CurrentUserState CurrentUserState
 
 <h3>Trả phòng</h3>
-<p class="text-muted">Chỉ hiển thị các phòng đang ở trạng thái <strong>Nhận phòng (checked_in)</strong> — đúng theo luồng Nhận phòng → Trả phòng.</p>
+<p class="text-muted">Chỉ hiển thị các phòng đang ở trạng thái <strong>Nhận phòng (checked_in)</strong>.</p>
 
 <div class="card p-3 mb-3">
     <div class="row g-2 align-items-end">
@@ -35,61 +35,19 @@
 @if (confirmingBookingDetailId != null && confirmingPreview != null)
 {
     <div class="card p-3 mb-3 border-warning">
-        <h5 class="mb-3">Xác nhận trả phòng - @confirmingPreview.BookingCode</h5>
-
-        <h6>Thông tin khách hàng</h6>
-        <p class="mb-1">Họ tên: <strong>@(confirmingPreview.CustomerFullName ?? "-")</strong></p>
-        <p class="mb-3">Điện thoại: @(confirmingPreview.CustomerPhone ?? "-")</p>
-
-        <h6>Thời gian lưu trú</h6>
-        <p class="mb-3">
-            Từ <strong>@confirmingPreview.CheckInDate.ToString("dd/MM/yyyy")</strong>
-            đến <strong>@confirmingPreview.CheckOutDate.ToString("dd/MM/yyyy")</strong>
-            (<strong>@confirmingPreview.Nights đêm</strong>)
+        <h5 class="mb-2">Trả phòng - @confirmingPreview.BookingCode</h5>
+        <p class="mb-1">Khách hàng: <strong>@(confirmingPreview.CustomerFullName ?? "-")</strong></p>
+        <p class="mb-1">
+            Phòng: @string.Join(", ", confirmingPreview.Rooms.Select(r => r.RoomNumber))
+            &nbsp;|&nbsp; @confirmingPreview.CheckInDate.ToString("dd/MM/yyyy") → @confirmingPreview.CheckOutDate.ToString("dd/MM/yyyy")
+            (@confirmingPreview.Nights đêm)
         </p>
-
-        <h6>Chi tiết yêu cầu</h6>
-        <table class="table table-sm mb-3">
-            <thead>
-                <tr>
-                    <th>Yêu cầu</th>
-                    <th>Ngày</th>
-                    <th>Số tiền</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Yêu cầu đặt phòng ban đầu</td>
-                    <td>@confirmingPreview.CheckInDate.ToString("dd/MM/yyyy")</td>
-                    <td>
-                        @confirmingPreview.OriginalAmount.ToString("N0") đ
-                        @if (confirmingPreview.OutstandingAmount > 0)
-                        {
-                            <span class="badge bg-danger ms-1">Còn nợ</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-success ms-1">Đã trả đủ</span>
-                        }
-                    </td>
-                </tr>
-                @foreach (var s in confirmingPreview.ExtraServices)
-                {
-                    <tr>
-                        <td>@s.Description</td>
-                        <td>@(s.HandledAt?.ToString("dd/MM/yyyy") ?? "-")</td>
-                        <td>@s.ExtraFee.ToString("N0") đ (phụ phí)</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-
-        <p class="mb-1">Tổng cộng: <strong>@confirmingPreview.TotalAmount.ToString("N0") đ</strong></p>
-        <p class="mb-1">Đã thanh toán: <strong>@confirmingPreview.PaidAmount.ToString("N0") đ</strong></p>
+        <p class="mb-1">Tổng tiền: <strong>@confirmingPreview.TotalAmount.ToString("N0") đ</strong></p>
+        <p class="mb-2">Đã thanh toán: <strong>@confirmingPreview.PaidAmount.ToString("N0") đ</strong></p>
 
         @if (confirmingPreview.OutstandingAmount > 0)
         {
-            <p class="mb-2 text-danger">Còn nợ: <strong>@confirmingPreview.OutstandingAmount.ToString("N0") đ</strong> - cần thu trước khi trả phòng.</p>
+            <p class="mb-2 text-danger">Còn thiếu: <strong>@confirmingPreview.OutstandingAmount.ToString("N0") đ</strong></p>
 
             <div class="row g-2 align-items-end mb-2">
                 <div class="col-md-4">
@@ -237,7 +195,7 @@ else
         {
             if (confirmingPayAmount < confirmingPreview.OutstandingAmount)
             {
-                errorMessage = $"Số tiền thu chưa đủ khoản còn nợ ({confirmingPreview.OutstandingAmount.ToString("N0")} đ).";
+                errorMessage = $"Số tiền thu chưa đủ khoản còn thiếu ({confirmingPreview.OutstandingAmount.ToString("N0")} đ).";
                 return;
             }
 
