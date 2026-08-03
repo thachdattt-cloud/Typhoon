@@ -175,6 +175,84 @@ else
     </table>
 }
 
+@if (viewingInvoice != null && viewingPreview != null)
+{
+    <div class="card p-3 mb-3 border-secondary">
+        <div class="d-flex justify-content-between align-items-start">
+            <h5 class="mb-3">Thông tin hóa đơn #@viewingInvoice.Id - @viewingPreview.BookingCode</h5>
+            <span class="badge bg-success">Đã xuất</span>
+        </div>
+
+        <h6>Thông tin khách hàng</h6>
+        <p class="mb-1">Họ tên: <strong>@(viewingPreview.CustomerFullName ?? "-")</strong></p>
+        <p class="mb-1">Tài khoản: @(viewingPreview.CustomerUsername ?? "-")</p>
+        <p class="mb-1">Điện thoại: @(viewingPreview.CustomerPhone ?? "-")</p>
+        <p class="mb-3">Email: @(viewingPreview.CustomerEmail ?? "-")</p>
+
+        <h6>Thời gian lưu trú</h6>
+        <p class="mb-3">
+            Từ <strong>@viewingPreview.CheckInDate.ToString("dd/MM/yyyy")</strong>
+            đến <strong>@viewingPreview.CheckOutDate.ToString("dd/MM/yyyy")</strong>
+            (<strong>@viewingPreview.Nights đêm</strong>)
+        </p>
+
+        <h6>Phòng đã ở</h6>
+        <table class="table table-sm mb-3">
+            <thead>
+                <tr>
+                    <th>Phòng</th>
+                    <th>Loại phòng</th>
+                    <th>Số khách</th>
+                    <th>Giá</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var room in viewingPreview.Rooms)
+                {
+                    <tr>
+                        <td>@room.RoomNumber</td>
+                        <td>@room.RoomTypeName</td>
+                        <td>@(room.GuestCount?.ToString() ?? "-")</td>
+                        <td>@room.Price.ToString("N0") đ</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <h6>Dịch vụ đã sử dụng</h6>
+        <table class="table table-sm mb-3">
+            <thead>
+                <tr>
+                    <th>Nội dung</th>
+                    <th>Ngày</th>
+                    <th>Số tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Đặt phòng ban đầu</td>
+                    <td>@viewingPreview.CheckInDate.ToString("dd/MM/yyyy")</td>
+                    <td>@viewingPreview.OriginalAmount.ToString("N0") đ</td>
+                </tr>
+                @foreach (var s in viewingPreview.ExtraServices)
+                {
+                    <tr>
+                        <td>@s.Description</td>
+                        <td>@(s.HandledAt?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td>@s.ExtraFee.ToString("N0") đ</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <p class="mb-1">Tổng tiền hóa đơn: <strong>@viewingInvoice.TotalAmount?.ToString("N0") đ</strong></p>
+        <p class="mb-1">Ngày xuất: <strong>@viewingInvoice.IssuedAt.ToString("dd/MM/yyyy HH:mm")</strong></p>
+        <p class="mb-3">Người xuất: <strong>@(viewingInvoice.IssuedByUser?.FullName ?? "-")</strong></p>
+
+        <button class="btn btn-outline-secondary" style="width: fit-content;" @onclick="HandleCloseViewInvoicePanel">Đóng</button>
+    </div>
+}
+
 <h5 class="mt-4">Hóa đơn đã xuất</h5>
 @if (!invoices.Any())
 {
@@ -191,6 +269,7 @@ else
                 <th>Tổng tiền</th>
                 <th>Ngày xuất</th>
                 <th>Người xuất</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -203,6 +282,9 @@ else
                     <td>@inv.TotalAmount?.ToString("N0") đ</td>
                     <td>@inv.IssuedAt.ToString("dd/MM/yyyy HH:mm")</td>
                     <td>@inv.IssuedByUser?.FullName</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => HandleViewInvoiceClick(inv)">Xem thông tin</button>
+                    </td>
                 </tr>
             }
         </tbody>
@@ -233,6 +315,22 @@ else
     {
         previewBookingId = null;
         preview = null;
+    }
+
+    private InvoiceModel? viewingInvoice;
+    private QuanLyKhachSan_fix.Services.Interfaces.Receptionist.InvoicePreview? viewingPreview;
+
+    private async Task HandleViewInvoiceClick(InvoiceModel inv)
+    {
+        errorMessage = "";
+        viewingPreview = await InvoiceService.GetInvoicePreviewAsync(inv.BookingId);
+        viewingInvoice = inv;
+    }
+
+    private void HandleCloseViewInvoicePanel()
+    {
+        viewingInvoice = null;
+        viewingPreview = null;
     }
 
     protected override async Task OnInitializedAsync()
