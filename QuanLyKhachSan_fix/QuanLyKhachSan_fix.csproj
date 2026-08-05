@@ -83,4 +83,11 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.10" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="wwwroot\images\rooms\deluxe\" />
+      <Folder Include="wwwroot\images\rooms\suite\" />
+      <Folder Include="wwwroot\images\rooms\superior\" />
+      <Folder Include="wwwroot\images\rooms\standard\" />
+    </ItemGroup>
+
 </Project>
