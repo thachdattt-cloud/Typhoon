@@ -23,7 +23,9 @@
         </div>
     </div>
 
-    <div class="home-hero">
+
+
+    <div class="home-hero" style="background-image: url('@roomTypeImages[selectedType]');">
         <div class="home-find-row">
             <span class="home-find-title">TÌM</span>
             @foreach (var type in roomTypeTabs)
@@ -49,6 +51,17 @@
                 🔍
             </button>
         </div>
+
+        @* <div class="home-room-preview">
+            @foreach (var img in roomTypeImages[selectedType])
+            {
+                <img src="@img" alt="@selectedType" class="home-room-preview-img" />
+            }
+        </div>
+ *@
+
+
+
     </div>
 </div>
 
@@ -56,7 +69,16 @@
     private readonly string[] roomTypeTabs = new[] { "Standard", "Superior", "Deluxe", "Family", "Suite" };
     private string selectedType = "Standard";
 
-    private DateTime checkInDate = DateTime.Today;
+    private readonly Dictionary<string, string> roomTypeImages = new()
+    {
+        ["Standard"] = "images/rooms/standard/1.png",
+        ["Superior"] = "images/rooms/superior/1.png",
+        ["Deluxe"] = "images/rooms/deluxe/1.png",
+        ["Family"] = "images/rooms/family/1.png",
+        ["Suite"] = "images/rooms/suite/1.png",
+    };
+
+    private DateTime checkInDate = DateTime.Today; 
     private DateTime checkOutDate = DateTime.Today.AddDays(1);
     private int guestCount = 1;
 

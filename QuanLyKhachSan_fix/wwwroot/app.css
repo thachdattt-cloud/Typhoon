@@ -402,13 +402,21 @@ h1:focus {
 }
 
 .home-hero {
-    background: var(--color-ivory-deep);
+    background-size: cover;
+    background-position: center;
+    background-image: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%), url('@roomTypeImages[selectedType]');
+    background-blend-mode: normal;
+    background-color: transparent;
+    transition: background-image 0.3s ease-in-out;
+    min-height: calc(100vh - 100px); /* trừ đi chiều cao thanh nav phía trên */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* căn nội dung TÌM + search box vào giữa ảnh */
+    /* các thuộc tính padding/position cũ giữ nguyên nếu có */
     border: 1px solid var(--color-line);
     border-radius: var(--radius);
     margin: 0 20px 40px;
     padding: 64px 40px;
-    display: flex;
-    flex-direction: column;
     align-items: center;
     gap: 40px;
 }
@@ -419,26 +427,36 @@ h1:focus {
     gap: 32px;
 }
 
+/* --- SỬA CẮT CHỮ NỔI BẬT TRÊN NỀN ĐÊM/ẢNH (PHƯƠNG ÁN 2) --- */
 .home-find-title {
     font-family: var(--font-display);
     font-size: 2.6rem;
     font-weight: 700;
     letter-spacing: 1px;
-    color: var(--color-wine-dark);
+    color: var(--color-gold-light); /* Đổi sang vàng sáng */
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9), 0 0 10px rgba(0, 0, 0, 0.5); /* Tạo lớp bóng đen dày đằng sau chữ */
 }
 
 .home-find-tab {
     font-size: 1.05rem;
-    color: var(--color-ink-soft);
+    color: #ffffff; /* Đổi sang chữ trắng */
     cursor: pointer;
     padding-bottom: 4px;
     font-family: var(--font-body);
+    /*    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9);*/
+    text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.8);
+    transition: all 0.2s ease;
 }
 
+    .home-find-tab:hover {
+        color: var(--color-gold-light);
+    }
+
     .home-find-tab.active {
-        color: var(--color-wine);
-        font-weight: 600;
-        border-bottom: 2px solid var(--color-gold);
+        color: var(--color-gold-light);
+        font-weight: 700;
+        border-bottom: 2px solid var(--color-gold-light);
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
     }
 
 .home-search-box {
@@ -501,4 +519,18 @@ h1:focus {
         flex-wrap: wrap;
         border-radius: 16px;
     }
+}
+.home-room-preview {
+    display: flex;
+    gap: 16px;
+    margin-top: 24px;
+    justify-content: center;
+}
+
+.home-room-preview-img {
+    width: 280px;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
